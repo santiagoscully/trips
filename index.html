@@ -604,12 +604,12 @@ const LINK_TESTS = [
   ["Hilton Honors", "com.hilton.android.hhonors", ["https://www.hilton.com/en/hilton-honors/guest/my-account/", "https://www.hilton.com/en/hilton-honors/guest/my-account/upcoming-stays/", "https://www.hilton.com/en/hilton-honors/guest/activity/", "https://www.hilton.com/en/book/reservation/find/", "https://www.hilton.com/en/hilton-honors/", "https://www.hilton.com/en/"]],
   ["Hilton Grand Vacations", "com.hilton.grandvacations", ["https://www.hgvc.com/", "https://www.hgvc.com/my-account", "https://club.hgv.com/"]],
   ["Southwest", "com.southwestairlines.mobile", ["https://www.southwest.com/air/manage-reservation/index.html", "https://www.southwest.com/air/check-in/index.html", "https://mobile.southwest.com/check-in"]],
-  ["SWISS", "com.yoc.swiss.swiss", ["https://www.swiss.com/us/en/manage-booking", "https://www.swiss.com/us/en/prepare/check-in", "https://www.swiss.com/us/en/homepage"]],
-  ["Copa", "com.mttnow.android.copa.production", ["https://mytrips.copaair.com/", "https://www.copaair.com/en-us/web-check-in/", "https://www.copaair.com/en-us/"]],
+  ["SWISS", "com.yoc.swiss.swiss", ["https://www.swiss.com/deeplink/cockpit?country=US&language=EN", "https://www.swiss.com/us/en/fly/check-in/online-check-in"]],
+  ["Copa", "com.mttnow.android.copa.production", ["https://mytrips.copaair.com/", "https://www.copaair.com/en-us/"]],
   ["easyJet", "com.mttnow.droid.easyjet", ["https://www.easyjet.com/en/manage-bookings", "https://www.easyjet.com/en/secure/MyEasyJet.mvc/ViewBooking", "https://www.easyjet.com/en"]],
   ["Avis", "com.avis.androidapp", ["https://www.avis.com/en/reservation/view-modify-cancel", "https://www.avis.com/en/home"]],
   ["Expedia", "com.expedia.bookings", ["https://www.expedia.com/trips", "https://www.expedia.com/"]],
-  ["Europcar", "com.clanmo.europcar", ["https://www.europcar.com/en-us/manage-my-booking", "https://www.europcar.com/en-us"]],
+  ["Europcar", "com.clanmo.europcar", ["https://www.europcar.com/en-us/reservation/searchbooking", "https://www.europcar.com/en-us"]],
 ];
 function renderAppLinks() {
   const test = (pkg, u) => { const x = new URL(u); return ANDROID ? `intent://${x.host}${x.pathname}${x.search}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${encodeURIComponent(u)};end` : u; };
