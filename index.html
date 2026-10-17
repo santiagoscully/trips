@@ -130,6 +130,9 @@ main{display:grid;gap:20px;padding-top:20px}
 .ic-lodging,.ic-home{background:var(--good-soft);color:var(--good)}
 .ic-car,.ic-transfer,.ic-ride{background:var(--now-soft);color:var(--now)}
 .ic-activity{background:var(--surface-2);color:var(--muted)}
+.logo{width:18px;height:18px;border-radius:4px;vertical-align:-4px;margin-right:6px;background:#fff;object-fit:contain}
+.seg.branded{border-left:5px solid var(--brand, var(--line))}
+.ckrow{border-left:4px solid var(--brand, transparent);padding-left:10px}
 .seg.ride{border-style:dashed;background:transparent}
 .seg-type{font:700 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
 .seg h4{margin:0;font-family:var(--display);font-stretch:95%;font-weight:700;font-size:17px}
@@ -534,7 +537,7 @@ function renderNow() {
     else if (st) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
     const nextSegs = withRides(trip).filter(s => ms(s.start) > t0).slice(0, 5);
     if (nextSegs.length) html += `<section class="card"><div class="eyebrow">Next in this trip</div><ul class="next">
-      ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${esc(s.type === "ride" ? s.title : segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${quickBtn(s) ? `<br>${quickBtn(s)}` : ""}${s.type === "ride" ? `<br><a class="btn mini" ${hrefAttrs(uber(s.toAddr, s.to))}>Open Uber ↗</a>` : ""}</span></li>`).join("")}</ul></section>`;
+      ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.type === "ride" ? s.title : segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${quickBtn(s) ? `<br>${quickBtn(s)}` : ""}${s.type === "ride" ? `<br><a class="btn mini" ${hrefAttrs(uber(s.toAddr, s.to))}>Open Uber ↗</a>` : ""}</span></li>`).join("")}</ul></section>`;
     if ((trip.watch || []).length) html += trip.watch.map(w => `<div class="flag">${esc(w)}</div>`).join("");
   }
   return html;
@@ -559,13 +562,40 @@ function previewControls() {
 // ---------- icons: one small glyph per kind of booking ----------
 const ICONS = {
   flight: '<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>',
-  lodging: '<path d="M3 18v-7a2 2 0 0 1 2-2h3a3 3 0 0 1 3 3v1h8a2 2 0 0 1 2 2v3h-2v-2H5v2zM7 12.5a2 2 0 1 0 0-.01z"/>',
+  lodging: '<path d="M4 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v4h4a1 1 0 0 1 1 1v12h2v2H2v-2zm3-14v2h2V7zm4 0v2h2V7zm-4 4v2h2v-2zm4 0v2h2v-2zm6 0v2h2v-2zm-10 4v2h2v-2zm4 0v2h2v-2zm6 0v2h2v-2z"/>',
   home: '<path d="M12 3 2 11h3v9h5v-6h4v6h5v-9h3z"/>',
   car: '<path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11a2 2 0 0 1 2 2v4h-2v2h-3v-2H8v2H5v-2H3v-4a2 2 0 0 1 2-2zm2.2 0h9.6l-1-3H8.2zM6.5 15a1.5 1.5 0 1 0 0-.01zm11 0a1.5 1.5 0 1 0 0-.01z"/>',
   transfer: '<path d="M3 7a2 2 0 0 1 2-2h11l5 5v6h-2a2.5 2.5 0 0 1-5 0H9a2.5 2.5 0 0 1-5 0H3zm2 0v3h4V7zm6 0v3h4V7zm6 1v2h2z"/>',
   activity: '<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4zm6 0v10h2V7z"/>',
   ride: '<path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11a2 2 0 0 1 2 2v4h-2v2h-3v-2H8v2H5v-2H3v-4a2 2 0 0 1 2-2zm2.2 0h9.6l-1-3H8.2zM6.5 15a1.5 1.5 0 1 0 0-.01zm11 0a1.5 1.5 0 1 0 0-.01z"/>',
 };
+// ---------- company branding: color stripe + the company's own site icon ----------
+const BRANDS = [
+  { key: "united", name: "United", domain: "united.com", color: "#002244", match: /united/i },
+  { key: "hgv", name: "Hilton Grand Vacations", domain: "hgvc.com", color: "#00305C", match: /hgvc|grand vacations/i },
+  { key: "hilton", name: "Hilton", domain: "hilton.com", color: "#002F61", match: /hilton|homewood/i },
+  { key: "southwest", name: "Southwest", domain: "southwest.com", color: "#304CB2", match: /southwest/i },
+  { key: "copa", name: "Copa", domain: "copaair.com", color: "#0032A0", match: /copa/i },
+  { key: "swiss", name: "SWISS", domain: "swiss.com", color: "#E2001A", match: /swiss\.com|^swiss$/i },
+  { key: "easyjet", name: "easyJet", domain: "easyjet.com", color: "#FF6600", match: /easyjet/i },
+  { key: "avis", name: "Avis", domain: "avis.com", color: "#D4002A", match: /avis/i },
+  { key: "europcar", name: "Europcar", domain: "europcar.com", color: "#00973A", match: /europcar/i },
+  { key: "expedia", name: "Expedia", domain: "expedia.com", color: "#191E3B", match: /expedia/i },
+  { key: "suites", name: "Suites Center", domain: "hotelescenter.es", color: "#1D3557", match: /hotelescenter|suites center/i },
+  { key: "ameron", name: "AMERON", domain: "ameroncollection.com", color: "#3C3C3B", match: /ameron/i },
+  { key: "transfermilan", name: "TransferMilan", domain: "transfermilan.com", color: "#1B4D8C", match: /transfermilan/i },
+  { key: "lindt", name: "Lindt", domain: "lindt-home-of-chocolate.com", color: "#002E5D", match: /lindt/i },
+  { key: "fcb", name: "FC Barcelona", domain: "fcbarcelona.com", color: "#A50044", match: /fc ?barcelona|fcbarcelona/i },
+];
+function brandOf(s) {
+  if (!s || s.type === "ride") return s?.type === "ride" ? { key: "uber", name: "Uber", domain: "uber.com", color: "#000000" } : null;
+  const hay = [s.airline?.name, s.title, s.link, s.onlineCheckin?.url].filter(Boolean).join(" ");
+  if (s.type === "flight") return BRANDS.find(b => b.match.test(s.airline?.name || "")) || null;
+  return BRANDS.find(b => b.match.test(hay)) || null;
+}
+const logo = b => b ? `<img class="logo" src="https://www.google.com/s2/favicons?domain=${b.domain}&sz=64" alt="${esc(b.name)}" width="18" height="18" loading="lazy" onerror="this.remove()">` : "";
+const brandStyle = s => { const b = brandOf(s); return b ? ` style="--brand:${b.color}"` : ""; };
+
 const kindOf = s => s.type === "lodging" && s.home ? "home" : s.type;
 const icon = s => `<span class="ic ic-${kindOf(s)}" aria-hidden="true"><svg viewBox="0 0 24 24">${ICONS[kindOf(s)] || ICONS.activity}</svg></span>`;
 
@@ -613,7 +643,7 @@ function withRides(trip) {
   return out;
 }
 function rideBlock(r) {
-  return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there</span>
+  return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · ${logo(brandOf(r))}Uber</span>
     <h4>No car booked: take an Uber</h4>
     <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}${r.home ? " (or a family pickup)" : ""} · around ${T(r.start)}</p>
     <div class="btns">${link(uber(r.toAddr, r.to), "Open Uber", true)}${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
@@ -623,7 +653,7 @@ function segBlock(s) {
   if (s.type === "ride") return rideBlock(s);
   if (s.type === "flight") {
     const dur = ms(s.end) - ms(s.start), hh = Math.floor(dur / H), mm = Math.round((dur % H) / M);
-    return `<div class="seg"><div class="seg-main"><span class="seg-type">${icon(s)}Flight · ${esc(s.airline.name)} ${esc(s.flightNumber)}</span>
+    return `<div class="seg branded"${brandStyle(s)}><div class="seg-main"><span class="seg-type">${icon(s)}Flight · ${logo(brandOf(s))}${esc(s.airline.name)} ${esc(s.flightNumber)}</span>
       <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
@@ -631,7 +661,7 @@ function segBlock(s) {
       <div class="btns">${ckLink(s, s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Status")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
-  return `<div class="seg"><div class="seg-main"><span class="seg-type">${icon(s)}${label}</span><h4>${esc(s.title)}</h4>
+  return `<div class="seg branded"${brandStyle(s)}><div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
@@ -665,7 +695,7 @@ function renderCheckin() {
     const label = x.type === "flight" ? `${x.airline.name} ${x.flightNumber.split(" ")[0]} · ${x.from} → ${x.to}` : x.title;
     const opens = x.type === "flight" ? ms(x.start) - (x.airline.checkinHours || 24) * H : ms(x.start) - (x.onlineCheckin.opensHours || 24) * H;
     const status = opens <= t0 ? "Check-in is open" : `Opens ${when(opens, x.start)}`;
-    return `<div class="ckrow"><div><b>${icon(x)}${esc(label)}</b><div class="muted">${DT(x.start)} · ${esc(t.title)}</div><div class="note">${status}${x.confirmation ? ` · <span class="code">${esc(x.confirmation)}</span>` : ""}</div></div>
+    return `<div class="ckrow"${brandStyle(x)}><div><b>${icon(x)}${logo(brandOf(x))}${esc(label)}</b><div class="muted">${DT(x.start)} · ${esc(t.title)}</div><div class="note">${status}${x.confirmation ? ` · <span class="code">${esc(x.confirmation)}</span>` : ""}</div></div>
       ${link(checkinLink(x), "Check in", opens <= t0)}</div>`;
   }).join("")}</section>`;
 }
