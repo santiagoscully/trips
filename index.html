@@ -115,6 +115,8 @@ main{display:grid;gap:20px;padding-top:20px}
 .chip{font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:0}
 .chip.fam{background:var(--accent-soft);color:var(--accent)}
 .chip.soon{background:var(--now-soft);color:var(--now)}
+.about summary{cursor:pointer;color:var(--muted);font-size:13px}
+.about p{font-size:13px;color:var(--muted);margin:6px 0}
 .ends{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .ends b{font-family:var(--body);color:var(--ink);margin-right:4px}
 .trip-body{padding:0 18px 18px;display:grid;gap:12px}
@@ -177,7 +179,9 @@ footer{color:var(--muted);font-size:13px;padding-top:12px}
     </nav>
   </header>
   <main id="app"><div class="empty">Loading trips…</div></main>
-  <footer id="foot">Details come from booking emails. Checked weekly, and daily from 2 days before each trip. <button class="copy" id="lock" hidden>Forget passphrase on this device</button></footer>
+  <footer id="foot"><details class="about"><summary>About</summary>
+    <p>Details come from booking emails. Flights and email are checked weekly, and every day from 2 days before a trip until it ends. <span id="about-checked"></span></p>
+    <button class="copy" id="lock" hidden>Forget passphrase on this device</button></details></footer>
 </div>
 
 <script>
@@ -547,9 +551,10 @@ function renderBanner() {
   const s = state.status;
   if (!s) return "";
   const alerts = (s.alerts || []).filter(a => !a.dismissed);
-  const checked = s.lastChecked ? `Last checked ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "Daily checks start soon.";
-  if (alerts.length) return `<div class="banner alert"><strong>${alerts.length} change${alerts.length > 1 ? "s" : ""} found</strong>${alerts.map(a => `<span>${esc(a.date ? a.date + ": " : "")}${esc(a.text)}</span>`).join("")}<span class="muted">${checked}</span></div>`;
-  return `<div class="banner"><span><strong>No changes found.</strong> ${checked} Flights and email are checked weekly, and daily from 2 days before a trip until it ends.</span></div>`;
+  const checked = s.lastChecked ? `Last checked ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "";
+  if (alerts.length) return `<div class="banner alert"><strong>${alerts.length} change${alerts.length > 1 ? "s" : ""} found</strong>${alerts.map(a => `<span>${esc(a.date ? a.date + ": " : "")}${esc(a.text)}</span>`).join("")}</div>`;
+  const about = document.getElementById("about-checked"); if (about) about.textContent = checked;
+  return "";
 }
 
 function render() {
