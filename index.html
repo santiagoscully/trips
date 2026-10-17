@@ -593,7 +593,8 @@ function brandOf(s) {
   if (s.type === "flight") return BRANDS.find(b => b.match.test(s.airline?.name || "")) || null;
   return BRANDS.find(b => b.match.test(hay)) || null;
 }
-const logo = b => b ? `<img class="logo" src="https://www.google.com/s2/favicons?domain=${b.domain}&sz=64" alt="${esc(b.name)}" width="18" height="18" loading="lazy" onerror="this.remove()">` : "";
+// Logos are served from this site (logos/<key>.png, saved by fetch_logos.py), so they also work offline.
+const logo = b => b ? `<img class="logo" src="logos/${b.key}.png" alt="${esc(b.name)}" width="18" height="18" loading="lazy" onerror="this.remove()">` : "";
 const brandStyle = s => { const b = brandOf(s); return b ? ` style="--brand:${b.color}"` : ""; };
 
 const kindOf = s => s.type === "lodging" && s.home ? "home" : s.type;
