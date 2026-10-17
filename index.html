@@ -246,7 +246,7 @@ const first = n => esc(String(n).split(" ")[0]);
 // Open the airline/hotel/car app instead of its website when it's installed.
 // Android: Chrome only opens apps through their browsable link handlers, so we hand the same https
 // link to the app's package (package names from each site's assetlinks.json / Play Store). If the app
-// can't take that link (or isn't installed), Chrome opens its Play Store page, whose Open button launches it. iPhone: plain https links already
+// can't take that link (or isn't installed), Chrome opens the website instead. iPhone: plain https links already
 // hand off to apps that claim them (United, Hilton...), so they stay as they are.
 const APPS = [
   [/(^|\.)united\.com$/, "com.united.mobile.android"],
@@ -273,8 +273,9 @@ const appHref = u => {
     return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=com.google.android.apps.maps;${back}`;
   const app = APPS.find(([re]) => re.test(url.hostname));
   if (!app) return u;
-  const store = `S.browser_fallback_url=${encodeURIComponent(`https://play.google.com/store/apps/details?id=${app[1]}`)};end`;
-  return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${app[1]};${store}`;
+  // If the app doesn't accept this exact link (apps only take some paths, e.g. Hilton's account page),
+  // Chrome opens the same page on the website instead, where check-in always works.
+  return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${app[1]};${back}`;
 };
 const hrefAttrs = u => { const h = appHref(u); return h === u ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(h)}"`; };
 const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" ${hrefAttrs(href)}>${esc(label)} ↗</a>` : "";
