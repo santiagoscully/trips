@@ -243,13 +243,44 @@ const now = () => state.override ?? Date.now();
 // ---------- small render helpers ----------
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const first = n => esc(String(n).split(" ")[0]);
-const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" href="${esc(href)}" target="_blank" rel="noopener">${esc(label)} ↗</a>` : "";
+// Open the airline/hotel/car app instead of its website when it's installed.
+// Android: an intent: link launches the app (package names from each site's assetlinks.json / Play Store)
+// and Chrome falls back to the website if the app isn't there. iPhone: plain https links already
+// hand off to apps that claim them (United, Hilton...), so they stay as they are.
+const APPS = [
+  [/(^|\.)united\.com$/, "com.united.mobile.android"],
+  [/(^|\.)(hgvc|hiltongrandvacations)\.com$/, "com.hilton.grandvacations"],
+  [/(^|\.)hilton\.com$/, "com.hilton.android.hhonors"],
+  [/(^|\.)avis\.com$/, "com.avis.androidapp"],
+  [/(^|\.)southwest\.com$/, "com.southwestairlines.mobile"],
+  [/(^|\.)swiss\.com$/, "com.yoc.swiss.swiss"],
+  [/(^|\.)copaair\.com$/, "com.mttnow.android.copa.production"],
+  [/(^|\.)easyjet\.com$/, "com.mttnow.droid.easyjet"],
+  [/(^|\.)expedia\.com$/, "com.expedia.bookings"],
+  [/(^|\.)europcar\.com$/, "com.clanmo.europcar"],
+  [/(^|\.)hyatt\.com$/, "com.Hyatt.hyt"],
+  [/(^|\.)marriott\.com$/, "com.marriott.mrt"],
+  [/(^|\.)ihg\.com$/, "com.ihg.apps.android"],
+];
+const ANDROID = /Android/i.test(navigator.userAgent);
+const appHref = u => {
+  if (!ANDROID || !u) return u;
+  let url; try { url = new URL(u); } catch (_) { return u; }
+  const back = `S.browser_fallback_url=${encodeURIComponent(u)};end`;
+  // Google Maps understands these links itself, so open the exact place/route in it
+  if (/(^|\.)google\.com$/.test(url.hostname) && url.pathname.startsWith("/maps"))
+    return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=com.google.android.apps.maps;${back}`;
+  const app = APPS.find(([re]) => re.test(url.hostname));
+  return app ? `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${app[1]};${back}` : u;
+};
+const hrefAttrs = u => { const h = appHref(u); return h === u ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(h)}"`; };
+const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" ${hrefAttrs(href)}>${esc(label)} ↗</a>` : "";
 const copyBtn = v => `<button class="copy" data-copy="${esc(v)}">Copy</button>`;
 const codeRow = (label, v) => v ? `<dt>${esc(label)}</dt><dd><span class="code">${esc(v)}</span>${copyBtn(v)}</dd>` : "";
 const row = (label, v) => v ? `<dt>${esc(label)}</dt><dd>${v}</dd>` : "";
 // The one link that takes you straight to checking in for a flight or hotel
 const checkinLink = s => s.type === "flight" ? s.airline?.checkin : s.onlineCheckin?.url;
-const quickBtn = s => { const u = checkinLink(s); return u ? `<a class="btn mini" href="${esc(u)}" target="_blank" rel="noopener">Check in ↗</a>` : ""; };
+const quickBtn = s => { const u = checkinLink(s); return u ? `<a class="btn mini" ${hrefAttrs(u)}>Check in ↗</a>` : ""; };
 const maps = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 const directions = (o, d) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`;
 const status = f => `https://www.google.com/search?q=${encodeURIComponent(f.flightNumber.split(" ")[0] + " flight status")}`;
@@ -523,7 +554,7 @@ function quickRow(t) {
   const items = t.segments.filter(x => checkinLink(x) && ms(x.end) > Date.now());
   if (!items.length) return "";
   const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
-  return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => `<a class="btn mini" href="${esc(checkinLink(x))}" target="_blank" rel="noopener">${esc(label(x))} ↗</a>`).join("")}</div>`;
+  return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`).join("")}</div>`;
 }
 
 function renderTrips(past) {
