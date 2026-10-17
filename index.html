@@ -176,14 +176,14 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .month{color:var(--accent);display:flex;align-items:center;gap:10px}
 .month::after{content:"";flex:1;height:1px;background:var(--line)}
 .trip{border-top:6px solid var(--tc, var(--accent))}
-.trip-photo{height:120px;margin:-16px -18px 6px;background:var(--accent-soft) center/cover no-repeat;position:relative}
+.trip-photo{aspect-ratio:3/1;height:auto;margin:-16px -18px 6px;background:var(--accent-soft) center/100% 100% no-repeat;position:relative}
 .trip-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,18,32,.25))}
 .seg{overflow:hidden}
-.seg-photo{height:110px;background:var(--accent-soft) center/cover no-repeat}
+.seg-photo{aspect-ratio:3/1;height:auto;background:var(--accent-soft) center/100% 100% no-repeat}
 .card>.seg-photo{margin:-16px -18px 0;border-radius:18px 18px 0 0}
 @media (max-width:480px){.card>.seg-photo{margin:-14px -14px 0}}
-.hero-photo{height:110px;background:var(--accent-soft) center/cover no-repeat}
-@media (max-width:480px){.trip-photo{margin:-14px -14px 6px;height:110px}}
+.hero-photo{aspect-ratio:3/1;height:auto;background:var(--accent-soft) center/100% 100% no-repeat}
+@media (max-width:480px){.trip-photo{margin:-14px -14px 6px}}
 .trip h3{color:var(--ink)}
 .chip{background:var(--accent-soft);color:var(--accent)}
 .chip.fam{background:var(--good-soft);color:var(--good)}
