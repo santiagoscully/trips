@@ -552,8 +552,8 @@ function renderBanner() {
   if (!s) return "";
   const alerts = (s.alerts || []).filter(a => !a.dismissed);
   const checked = s.lastChecked ? `Last checked ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "";
-  if (alerts.length) return `<div class="banner alert"><strong>${alerts.length} change${alerts.length > 1 ? "s" : ""} found</strong>${alerts.map(a => `<span>${esc(a.date ? a.date + ": " : "")}${esc(a.text)}</span>`).join("")}</div>`;
   const about = document.getElementById("about-checked"); if (about) about.textContent = checked;
+  if (alerts.length) return `<div class="banner alert"><strong>${alerts.length} change${alerts.length > 1 ? "s" : ""} found</strong>${alerts.map(a => `<span>${esc(a.date ? a.date + ": " : "")}${esc(a.text)}</span>`).join("")}</div>`;
   return "";
 }
 
