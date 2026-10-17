@@ -177,7 +177,7 @@ footer{color:var(--muted);font-size:13px;padding-top:12px}
     </nav>
   </header>
   <main id="app"><div class="empty">Loading trips…</div></main>
-  <footer id="foot">Details come from booking emails and are checked once a day. <button class="copy" id="lock" hidden>Forget passphrase on this device</button></footer>
+  <footer id="foot">Details come from booking emails. Checked weekly, and daily from 2 days before each trip. <button class="copy" id="lock" hidden>Forget passphrase on this device</button></footer>
 </div>
 
 <script>
@@ -549,7 +549,7 @@ function renderBanner() {
   const alerts = (s.alerts || []).filter(a => !a.dismissed);
   const checked = s.lastChecked ? `Last checked ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "Daily checks start soon.";
   if (alerts.length) return `<div class="banner alert"><strong>${alerts.length} change${alerts.length > 1 ? "s" : ""} found</strong>${alerts.map(a => `<span>${esc(a.date ? a.date + ": " : "")}${esc(a.text)}</span>`).join("")}<span class="muted">${checked}</span></div>`;
-  return `<div class="banner"><span><strong>No changes found.</strong> ${checked} Flights are checked against live status and your email once a day.</span></div>`;
+  return `<div class="banner"><span><strong>No changes found.</strong> ${checked} Flights and email are checked weekly, and daily from 2 days before a trip until it ends.</span></div>`;
 }
 
 function render() {
