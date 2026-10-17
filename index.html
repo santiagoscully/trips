@@ -471,6 +471,8 @@ function renderBanner() {
 function render() {
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === state.view)));
   const app = document.getElementById("app");
+  document.querySelector(".who").hidden = state.locked || !state.loaded;
+  document.querySelector(".tabs").hidden = state.locked;
   if (state.locked) {
     app.innerHTML = `<form class="card" id="unlock" autocomplete="on"><div class="eyebrow">Private</div><h3>Enter the family passphrase</h3>
       <p class="note">Trips are encrypted. You only need to do this once on this device.</p>
