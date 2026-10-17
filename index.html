@@ -184,7 +184,7 @@ footer{color:var(--muted);font-size:13px;padding-top:12px}
   <main id="app"><div class="empty">Loading trips…</div></main>
   <footer id="foot"><details class="about"><summary>About</summary>
     <p>Details come from booking emails. Flights and email are checked weekly, and every day from 2 days before a trip until it ends. <span id="about-checked"></span></p>
-    <button class="copy" id="lock" hidden>Forget passphrase on this device</button></details></footer>
+    <button class="copy" id="lock" hidden>Forget passphrase on this device</button> <a class="copy" href="#applinks">Test app links</a></details></footer>
 </div>
 
 <script>
@@ -215,7 +215,7 @@ function allPeople() {
   const rest = [...all].filter(n => n !== MAIN).sort();
   return [MAIN, ...rest];
 }
-const h = (location.hash || "").slice(1); if (["now","trips","past","checkin"].includes(h)) state.view = h;
+const h = (location.hash || "").slice(1); if (["now","trips","past","checkin","applinks"].includes(h)) state.view = h;
 
 // ---------- time helpers: every ISO string carries its own local offset ----------
 const ms = iso => Date.parse(iso);
@@ -598,6 +598,28 @@ function renderCheckin() {
   }).join("")}</section>`;
 }
 
+// Test screen (#applinks): which "my trips" links does each app accept? Tap each; if the app opens, it works.
+const LINK_TESTS = [
+  ["United", "com.united.mobile.android", ["https://www.united.com/en/us/manageres/mytrips", "https://www.united.com/en/us/checkin"]],
+  ["Hilton Honors", "com.hilton.android.hhonors", ["https://www.hilton.com/en/hilton-honors/guest/my-account/", "https://www.hilton.com/en/hilton-honors/guest/my-account/upcoming-stays/", "https://www.hilton.com/en/hilton-honors/guest/activity/", "https://www.hilton.com/en/book/reservation/find/", "https://www.hilton.com/en/hilton-honors/", "https://www.hilton.com/en/"]],
+  ["Hilton Grand Vacations", "com.hilton.grandvacations", ["https://www.hgvc.com/", "https://www.hgvc.com/my-account", "https://club.hgv.com/"]],
+  ["Southwest", "com.southwestairlines.mobile", ["https://www.southwest.com/air/manage-reservation/index.html", "https://www.southwest.com/air/check-in/index.html", "https://mobile.southwest.com/check-in"]],
+  ["SWISS", "com.yoc.swiss.swiss", ["https://www.swiss.com/us/en/manage-booking", "https://www.swiss.com/us/en/prepare/check-in", "https://www.swiss.com/us/en/homepage"]],
+  ["Copa", "com.mttnow.android.copa.production", ["https://mytrips.copaair.com/", "https://www.copaair.com/en-us/web-check-in/", "https://www.copaair.com/en-us/"]],
+  ["easyJet", "com.mttnow.droid.easyjet", ["https://www.easyjet.com/en/manage-bookings", "https://www.easyjet.com/en/secure/MyEasyJet.mvc/ViewBooking", "https://www.easyjet.com/en"]],
+  ["Avis", "com.avis.androidapp", ["https://www.avis.com/en/reservation/view-modify-cancel", "https://www.avis.com/en/home"]],
+  ["Expedia", "com.expedia.bookings", ["https://www.expedia.com/trips", "https://www.expedia.com/"]],
+  ["Europcar", "com.clanmo.europcar", ["https://www.europcar.com/en-us/manage-my-booking", "https://www.europcar.com/en-us"]],
+];
+function renderAppLinks() {
+  const test = (pkg, u) => { const x = new URL(u); return ANDROID ? `intent://${x.host}${x.pathname}${x.search}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${encodeURIComponent(u)};end` : u; };
+  return `<section class="card"><div class="eyebrow">App link test</div>
+    <p class="note">Tap each link. If the app opens, that link works; if a web page opens, it doesn't. Come back here with the back button and try the next. Tell Claude the numbers that opened the app (for example "Hilton 3, Copa 1").</p>
+    ${LINK_TESTS.map(([name, pkg, urls]) => `<div class="ckrow"><b>${esc(name)}</b><div class="btns">${urls.map((u, i) =>
+      `<a class="btn mini" href="${esc(test(pkg, u))}" title="${esc(u)}">${i + 1} · ${esc(new URL(u).pathname.replace(/\/$/, "").split("/").pop() || "home")}</a>`).join("")}</div></div>`).join("")}
+  </section>`;
+}
+
 function renderTrips(past) {
   const t0 = Date.now();
   const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
@@ -651,7 +673,7 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? renderNow() : state.view === "checkin" ? renderCheckin() : renderTrips(state.view === "past");
+  const body = state.view === "now" ? renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "applinks" ? renderAppLinks() : renderTrips(state.view === "past");
   app.innerHTML = renderBanner() + body;
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
@@ -743,7 +765,7 @@ document.getElementById("lock").addEventListener("click", () => {
 load();
 // refresh data when the app comes back to the foreground
 // shortcuts open "#checkin" / "#now" / "#trips" even when the app is already open
-window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","past","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","past","checkin","applinks"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !state.locked && blob) load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
