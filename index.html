@@ -176,6 +176,10 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .month{color:var(--accent);display:flex;align-items:center;gap:10px}
 .month::after{content:"";flex:1;height:1px;background:var(--line)}
 .trip{border-top:6px solid var(--tc, var(--accent))}
+.trip-photo{height:120px;margin:-16px -18px 6px;background:var(--accent-soft) center/cover no-repeat;position:relative}
+.trip-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,18,32,.25))}
+.hero-photo{height:110px;background:var(--accent-soft) center/cover no-repeat}
+@media (max-width:480px){.trip-photo{margin:-14px -14px 6px;height:110px}}
 .trip h3{color:var(--ink)}
 .chip{background:var(--accent-soft);color:var(--accent)}
 .chip.fam{background:var(--good-soft);color:var(--good)}
@@ -226,6 +230,7 @@ footer .about summary{color:var(--muted)}
   <main id="app"><div class="empty">Loading trips…</div></main>
   <footer id="foot"><details class="about"><summary>About</summary>
     <p>Details come from booking emails. Flights and email are checked weekly, and every day from 2 days before a trip until it ends. <span id="about-checked"></span></p>
+    <p id="photo-credits"></p>
     <button class="copy" id="lock" hidden>Forget passphrase on this device</button></details></footer>
 </div>
 
@@ -542,7 +547,7 @@ function renderNow() {
     let head;
     if (primary) {
       const c = actionCard(primary, trip);
-      head = `<section class="hero"><div class="hero-head${primary.k === "stay" ? " calm" : ""}"><div class="eyebrow">${esc(trip.title)} · ${c.eyebrow}</div><h2>${c.title}</h2><p class="sub">${c.sub}</p></div>
+      head = `<section class="hero">${tripPhoto(trip, "hero-photo")}<div class="hero-head${primary.k === "stay" ? " calm" : ""}"><div class="eyebrow">${esc(trip.title)} · ${c.eyebrow}</div><h2>${c.title}</h2><p class="sub">${c.sub}</p></div>
         ${c.body ? `<div class="hero-body">${c.body}</div>` : ""}</section>`;
       const others = live.slice(1).filter(a => a.k !== "stay" && !(a.k === "checkout" && primary.k === "stay"));
       for (const o of others) {
@@ -552,7 +557,7 @@ function renderNow() {
     } else {
       const n = upcoming[0];
       const c = n ? actionCard(n, trip) : null;
-      head = `<section class="hero"><div class="hero-head calm"><div class="eyebrow">${esc(trip.title)}</div>
+      head = `<section class="hero">${tripPhoto(trip, "hero-photo")}<div class="hero-head calm"><div class="eyebrow">${esc(trip.title)}</div>
         <h2>${n ? `Coming up ${rel(n.from - t0)}` : "Trip wrapping up"}</h2><p class="sub">${n ? `${c.title.replace(/<[^>]+>/g, "")} · ${when(n.from, n.s.start)}` : "Nothing else scheduled."}</p></div></section>`;
     }
     html += head;
@@ -734,6 +739,10 @@ function renderCheckin() {
   }).join("")}</section>`;
 }
 
+// Trip backdrop photos live in photos/<name>.jpg (Wikimedia Commons; credits shown in About)
+const PHOTO_CREDITS = {"boulder": {"title": "Flatirons Sunrise.jpg", "artist": "Tyler Cipriani", "license": "CC BY-SA 4.0", "url": "https://commons.wikimedia.org/wiki/File:Flatirons_Sunrise.jpg"}, "diamond-head": {"title": "Diamond Head from Waikiki Beach.jpg", "artist": "Jackie Gleason Columbus, OH / Partyk1d24 at en.wikipedia", "license": "Public domain", "url": "https://commons.wikimedia.org/wiki/File:Diamond_Head_from_Waikiki_Beach.jpg"}, "alta-gracia": {"title": "Estancia Jesuítica de Alta Gracia Argentina 2005-01-01.jpg", "artist": "Sofocador", "license": "CC BY-SA 2.0", "url": "https://commons.wikimedia.org/wiki/File:Estancia_Jesu%C3%ADtica_de_Alta_Gracia_Argentina_2005-01-01.jpg"}, "matterhorn": {"title": "Matterhorn Breuil-Cervinia-1.jpg", "artist": "Rufus46", "license": "CC BY-SA 3.0", "url": "https://commons.wikimedia.org/wiki/File:Matterhorn_Breuil-Cervinia-1.jpg"}, "waikiki": {"title": "Waikiki Beach (2024)-L1004709.jpg", "artist": "Frank Schulenburg", "license": "CC BY-SA 4.0", "url": "https://commons.wikimedia.org/wiki/File:Waikiki_Beach_(2024)-L1004709.jpg"}, "golden-gate": {"title": "Golden gate bridge sunset (Unsplash).jpg", "artist": "Denys Nevozhai dnevozhai", "license": "CC0", "url": "https://commons.wikimedia.org/wiki/File:Golden_gate_bridge_sunset_(Unsplash).jpg"}, "las-vegas": {"title": "Las Vegas Strip at night, 2012.jpg", "artist": "Clément Bardot", "license": "CC BY-SA 3.0", "url": "https://commons.wikimedia.org/wiki/File:Las_Vegas_Strip_at_night,_2012.jpg"}};
+const tripPhoto = (t, cls = "trip-photo") => t.photo ? `<div class="${cls}" style="background-image:url('photos/${esc(t.photo)}.jpg')" role="img" aria-label="${esc(t.place || t.title)}"></div>` : "";
+
 // each trip card gets its own colour band
 const TRIP_COLORS = ["#2E5BEA", "#E0571B", "#0B8F7D", "#8B5CF6", "#D9A100", "#D63864"];
 
@@ -748,6 +757,7 @@ function renderTrips(past) {
     if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     const soon = !past && ms(t.start) - t0 < 7 * D;
     html += `<details class="trip" style="--tc:${TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
+      ${tripPhoto(t)}
       <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
       <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
@@ -768,7 +778,15 @@ function renderBanner() {
   return "";
 }
 
+function renderCredits() {
+  const el = document.getElementById("photo-credits"); if (!el || el.dataset.done) return;
+  el.innerHTML = "Trip photos from Wikimedia Commons: " + Object.values(PHOTO_CREDITS).map(c =>
+    `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title.replace(/\.(jpe?g|png)$/i, ""))}</a> by ${esc(c.artist)} (${esc(c.license)})`).join("; ") + ".";
+  el.dataset.done = "1";
+}
+
 function render() {
+  renderCredits();
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === state.view)));
   const app = document.getElementById("app");
   document.querySelector(".who").hidden = state.locked || !state.loaded;
