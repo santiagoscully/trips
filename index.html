@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trip Board</title>
 <meta name="theme-color" content="#16202A">
 <link rel="manifest" href="manifest.webmanifest">
@@ -37,7 +42,11 @@
   --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
 }
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;padding-inline:16px;padding-block:0 48px}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;padding-inline:max(14px,env(safe-area-inset-left,0px));padding-block:0 48px}
 .wrap{max-width:760px;margin:0 auto}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:16px 10px;border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -68,6 +77,8 @@ main{display:grid;gap:20px;padding-top:20px}
 .btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font:700 15px/1 var(--body);padding:12px 16px;border-radius:10px;border:1px solid var(--line);color:var(--ink);background:var(--surface)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn:hover{filter:brightness(.97)}
+.quick{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.quick .btn.mini{margin-top:0}
 .btn.mini{padding:7px 10px;font-size:13px;margin-top:6px;color:var(--accent);border-color:var(--accent)}
 .kv{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:6px 14px;margin:0}
 .kv dt{color:var(--muted);font-size:14px}
@@ -95,6 +106,8 @@ main{display:grid;gap:20px;padding-top:20px}
 .trip{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .trip>summary{list-style:none;cursor:pointer;padding:16px 18px;display:grid;gap:6px}
 .trip>summary::-webkit-details-marker{display:none}
+.chev{font-size:26px;line-height:1;color:var(--muted);transition:transform .15s}
+.trip[open] .chev{transform:rotate(90deg)}
 .trip-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
 .trip h3{font-family:var(--display);font-stretch:90%;font-weight:800;font-size:22px;margin:0;text-wrap:balance}
 .dates{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -129,10 +142,27 @@ main{display:grid;gap:20px;padding-top:20px}
 .preview .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .preview input{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 footer{color:var(--muted);font-size:13px;padding-top:12px}
-@media (max-width:480px){.route .ap{font-size:28px}.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}.next li{grid-template-columns:1fr;gap:2px}}
+@media (max-width:480px){
+  .route .ap{font-size:28px}
+  .kv{grid-template-columns:1fr;gap:2px 0}.kv dt{margin-top:8px;font-size:13px}
+  .next li{grid-template-columns:1fr;gap:2px}
+  h1{font-size:24px}
+  .trip>summary{padding:14px}
+  .trip-body{padding:0 12px 14px}
+  .trip h3{font-size:21px}
+  .seg-main{padding:12px}
+  .stub{padding:12px}
+  .card{padding:14px}
+  .hero-head{padding:16px}
+  .hero-body{padding:14px 16px 16px}
+  .btn{padding:11px 14px}
+  .ends{font-size:14px}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
+</head>
+<body>
 <div class="wrap">
   <header class="top">
     <div class="brand">
@@ -488,8 +518,8 @@ function tripEnds(t) {
 function quickRow(t) {
   const items = t.segments.filter(x => checkinLink(x) && ms(x.end) > Date.now());
   if (!items.length) return "";
-  const label = x => x.type === "flight" ? `${x.flightNumber.split(" ")[0]} · ${DD(x.start)}` : x.title.split(",")[0];
-  return `<div class="card"><div class="eyebrow">Quick check-in</div><div class="btns">${items.map(x => link(checkinLink(x), label(x))).join("")}</div></div>`;
+  const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
+  return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => `<a class="btn mini" href="${esc(checkinLink(x))}" target="_blank" rel="noopener">${esc(label(x))} ↗</a>`).join("")}</div>`;
 }
 
 function renderTrips(past) {
@@ -502,8 +532,8 @@ function renderTrips(past) {
     const p = parts(ms(t.start), offMin(t.start)), mk = `${MO[p.mo]} ${p.y}`;
     if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     const soon = !past && ms(t.start) - t0 < 7 * D;
-    html += `<details class="trip"${i === 0 && !past ? " open" : ""}><summary>
-      <div class="trip-top"><h3>${esc(t.title)}</h3></div>
+    html += `<details class="trip"><summary>
+      <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
       <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
@@ -637,3 +667,5 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && !s
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
 </script>
+</body>
+</html>
