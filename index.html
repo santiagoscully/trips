@@ -102,6 +102,8 @@ main{display:grid;gap:20px;padding-top:20px}
 .chip{font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:0}
 .chip.fam{background:var(--accent-soft);color:var(--accent)}
 .chip.soon{background:var(--now-soft);color:var(--now)}
+.ends{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ends b{font-family:var(--body);color:var(--ink);margin-right:4px}
 .trip-body{padding:0 18px 18px;display:grid;gap:12px}
 .seg{border:1px solid var(--line);border-radius:12px;background:var(--surface);display:grid}
 .seg-main{padding:14px 16px;display:grid;gap:8px}
@@ -474,6 +476,15 @@ function segBlock(s) {
     <div class="btns">${s.onlineCheckin ? link(s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
 }
 
+// "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
+function tripEnds(t) {
+  const fl = t.segments.filter(x => x.type === "flight");
+  const out = fl[0], back = fl.length > 1 ? fl[fl.length - 1] : null;
+  const leave = out ? `${DT(out.start)} (${esc(out.from)})` : DT(t.start);
+  const ret = back ? `${DT(back.end)} (${esc(back.to)})` : out ? null : DT(t.end);
+  return `<div class="ends"><span><b>Leave</b> ${leave}</span>${ret ? `<span><b>${back ? "Back" : "Until"}</b> ${ret}</span>` : (out ? `<span><b>Arrive</b> ${DT(out.end)} (${esc(out.to)})</span>` : "")}</div>`;
+}
+
 function quickRow(t) {
   const items = t.segments.filter(x => checkinLink(x) && ms(x.end) > Date.now());
   if (!items.length) return "";
@@ -496,6 +507,7 @@ function renderTrips(past) {
       <div class="muted">${esc(t.place)}</div>
       <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
+      ${tripEnds(t)}
       </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${t.segments.map(segBlock).join("")}</div></details>`;
   });
   return html;
