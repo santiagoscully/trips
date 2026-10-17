@@ -285,6 +285,12 @@ const maps = q => `https://www.google.com/maps/search/?api=1&query=${encodeURICo
 const directions = (o, d) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`;
 const status = f => `https://www.google.com/search?q=${encodeURIComponent(f.flightNumber.split(" ")[0] + " flight status")}`;
 const apName = c => AIRPORTS[c] || c;
+// Map/directions target: the flight's terminal when we know it ("SJC airport Terminal A"), else the airport
+const apPlace = (code, term) => term && !/^main terminal/i.test(term) ? `${code} airport ${term.split(",")[0]}` : `${code} airport`;
+const depPlace = f => apPlace(f.from, f.departure?.terminal);
+const arrPlace = f => apPlace(f.to, f.arrival?.terminal);
+// "Terminal A · Gate 12" (empty when nothing is known yet)
+const termGate = o => [o?.terminal, o?.gate && `Gate ${o.gate}`].filter(Boolean).join(" · ");
 const city = f => apName(f.to);
 // "4:39 PM Denver time", plus the date when it lands on a different local day than it leaves
 const arrives = f => `${T(f.end)} ${esc(city(f))} time${DD(f.end) !== DD(f.start) ? ` (${DD(f.end)})` : ""}`;
@@ -346,15 +352,16 @@ function actionCard(a, t) {
     const lead = (s.international ? 3 : 2);
     eyebrow = "Time to go";
     const dm = driveMin(s.from);
-    title = dm ? `Leave home by ${timeAt(ms(s.start) - lead * H - dm * M, s.start)} for ${esc(apName(s.from))} airport` : `Head to ${esc(apName(s.from))} airport`;
-    sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}${dm ? `; the drive from ${esc(HOME.address)} is about ${dm} min` : ""}.`;
-    body = `<div class="btns">${link(dm ? directions(HOME.address, s.from + " airport") : maps(s.from + " airport"), dm ? "Directions from home" : "Map to airport", true)}${link(s.airline.checkin, "Boarding pass")}${link(status(s), "Gate & status")}</div>
-      <dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
+    const tg = termGate(s.departure);
+    title = (dm ? `Leave home by ${timeAt(ms(s.start) - lead * H - dm * M, s.start)} for ${esc(apName(s.from))} airport` : `Head to ${esc(apName(s.from))} airport`) + (s.departure?.terminal ? `, ${esc(s.departure.terminal.split(",")[0])}` : "");
+    sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}${dm ? `; the drive from ${esc(HOME.address)} is about ${dm} min` : ""}.${tg ? ` Departs from ${esc(tg)}.` : ""}${s.departure?.gate ? "" : " Gate not posted yet."}`;
+    body = `<div class="btns">${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", true)}${link(s.airline.checkin, "Boarding pass")}${link(status(s), "Gate & status")}</div>
+      ${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}<dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "gohome") {
     eyebrow = "Welcome back";
     title = "Head home";
     sub = `About ${driveMin(s.to)} min from ${esc(apName(s.to))} to ${esc(HOME.address)}.`;
-    body = `<ul class="steps"><li><b>Baggage claim</b>${esc(s.arrival?.bags || "Follow signs to baggage claim.")}</li></ul><div class="btns">${link(directions(s.to + " airport", HOME.address), "Directions home", true)}</div>`;
+    body = `<ul class="steps"><li><b>Baggage claim</b>${esc(s.arrival?.bags || "Follow signs to baggage claim.")}</li></ul><div class="btns">${link(directions(arrPlace(s), HOME.address), "Directions home", true)}</div>`;
   } else if (a.k === "inair") {
     eyebrow = "In the air";
     title = `${esc(s.flightNumber)} to ${esc(city(s))}`;
@@ -363,13 +370,13 @@ function actionCard(a, t) {
   } else if (a.k === "bags") {
     eyebrow = "You've landed";
     title = `Welcome to ${esc(city(s))}. Pick up your bags`;
-    sub = `${esc(s.flightNumber)} landed ${T(s.end)}.`;
+    sub = `${esc(s.flightNumber)} landed ${T(s.end)}${termGate(s.arrival) ? ` at ${esc(termGate(s.arrival))}` : ""}.`;
     body = `<ul class="steps"><li><b>Baggage claim</b>${esc(s.arrival?.bags || "Follow signs to baggage claim.")}</li>${(s.arrival?.ground || []).map(g => `<li>${esc(g)}</li>`).join("")}</ul>
       <div class="btns">${link(status(s), "Carousel & status", true)}</div>`;
   } else if (a.k === "connect") {
     eyebrow = "Connection";
     title = `Make your connection to ${esc(a.conn.flightNumber)}`;
-    sub = `Departs ${T(a.conn.start)} to ${esc(apName(a.conn.to))}. You have ${rel(ms(a.conn.start) - now()).replace("in ", "")} left.`;
+    sub = `Departs ${T(a.conn.start)} to ${esc(apName(a.conn.to))}${termGate(a.conn.departure) ? ` from ${esc(termGate(a.conn.departure))}` : ""}. You have ${rel(ms(a.conn.start) - now()).replace("in ", "")} left.`;
     body = `<ul class="steps"><li>${esc(s.arrival?.bags || "")}</li></ul>
       <div class="btns">${link(a.conn.airline.checkin, `Check in on ${a.conn.airline.name}`, true)}${link(status(a.conn), "Gate & status")}</div>
       <dl class="kv">${codeRow("Confirmation", a.conn.confirmation)}</dl>${paxList(a.conn.travelers)}`;
@@ -389,7 +396,7 @@ function actionCard(a, t) {
       sub = `${tgt.type === "transfer" ? "Pickup" : "Pickup"} ${T(tgt.start)}${lodging ? `, then on to ${esc(lodging.title)}` : ""}.`;
     }
     body = `<ul class="steps">${(s.arrival?.ground || []).map(g => `<li>${esc(g)}</li>`).join("")}</ul>
-      <div class="btns">${link(directions(s.to + " airport", (lodging || tgt).address || (lodging || tgt).title), "Directions", true)}</div>
+      <div class="btns">${link(directions(arrPlace(s), (lodging || tgt).address || (lodging || tgt).title), "Directions", true)}</div>
       <dl class="kv">${a.targets.map(x => codeRow(x.title, x.confirmation)).join("")}</dl>
       ${a.targets.flatMap(x => x.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}`;
   } else if (a.k === "checkout") {
@@ -427,7 +434,7 @@ function actionCard(a, t) {
 function flightNowCard(f) {
   const dm = driveMin(f.from), lead = f.international ? 3 : 2;
   const fromHome = dm ? `<div class="flag ok">Leave ${esc(HOME.address)} by ${timeAt(ms(f.start) - lead * H - dm * M, f.start)} on ${DD(f.start)}: about ${dm} min to ${esc(apName(f.from))} and ${lead} h at the airport.</div>
-    <div class="btns">${link(directions(HOME.address, f.from + " airport"), "Directions to the airport", true)}</div>` : "";
+    <div class="btns">${link(directions(HOME.address, depPlace(f)), "Directions to the airport", true)}</div>` : "";
   return `<section class="card" aria-label="Your next flight"><div class="eyebrow">Your next flight</div>${fromHome}${segBlock(f)}</section>`;
 }
 
@@ -527,10 +534,10 @@ function segBlock(s) {
   if (s.type === "flight") {
     const dur = ms(s.end) - ms(s.start), hh = Math.floor(dur / H), mm = Math.round((dur % H) / M);
     return `<div class="seg"><div class="seg-main"><span class="seg-type">Flight · ${esc(s.airline.name)} ${esc(s.flightNumber)}</span>
-      <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span></div></div>
+      <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
-      <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span></div></div></div></div>
-      <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${notes(s.notes)}
+      <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
+      <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
       <div class="btns">${link(s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Status")}</div></div></div>`;
   }
   const label = { lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type;
