@@ -68,6 +68,7 @@ main{display:grid;gap:20px;padding-top:20px}
 .btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font:700 15px/1 var(--body);padding:12px 16px;border-radius:10px;border:1px solid var(--line);color:var(--ink);background:var(--surface)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .btn:hover{filter:brightness(.97)}
+.btn.mini{padding:7px 10px;font-size:13px;margin-top:6px;color:var(--accent);border-color:var(--accent)}
 .kv{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:6px 14px;margin:0}
 .kv dt{color:var(--muted);font-size:14px}
 .kv dd{margin:0;font-weight:700;overflow-wrap:anywhere}
@@ -208,6 +209,9 @@ const link = (href, label, primary) => href ? `<a class="btn${primary ? " primar
 const copyBtn = v => `<button class="copy" data-copy="${esc(v)}">Copy</button>`;
 const codeRow = (label, v) => v ? `<dt>${esc(label)}</dt><dd><span class="code">${esc(v)}</span>${copyBtn(v)}</dd>` : "";
 const row = (label, v) => v ? `<dt>${esc(label)}</dt><dd>${v}</dd>` : "";
+// The one link that takes you straight to checking in for a flight or hotel
+const checkinLink = s => s.type === "flight" ? s.airline?.checkin : s.onlineCheckin?.url;
+const quickBtn = s => { const u = checkinLink(s); return u ? `<a class="btn mini" href="${esc(u)}" target="_blank" rel="noopener">Check in ↗</a>` : ""; };
 const maps = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 const directions = (o, d) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`;
 const status = f => `https://www.google.com/search?q=${encodeURIComponent(f.flightNumber.split(" ")[0] + " flight status")}`;
@@ -245,6 +249,7 @@ function actionsFor(trip) {
       }
     } else if (s.type === "lodging") {
       acts.push({ k: "stay", from: st, to: en, s, p: 1 });
+      if (s.onlineCheckin) acts.push({ k: "hotelcheckin", from: st - (s.onlineCheckin.opensHours || 24) * H, to: st + 6 * H, s, p: 4 });
       if (!s.home) acts.push({ k: "checkout", from: en - 4 * H, to: en, s, p: 4 });
     } else if (s.type === "car" || s.type === "transfer") {
       acts.push({ k: "pickup", from: st - 90 * M, to: st + 60 * M, s, p: 6 });
@@ -315,6 +320,11 @@ function actionCard(a, t) {
     title = `Check out of ${esc(s.title)} by ${T(s.end)}`;
     sub = `${rel(ms(s.end) - now())}.`;
     body = `<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Phone", esc(s.phone))}</dl>`;
+  } else if (a.k === "hotelcheckin") {
+    eyebrow = "Hotel check-in";
+    title = `Check in online for ${esc(s.title)}`;
+    sub = `Rooms are ready from ${DT(s.start)}. ${esc(s.onlineCheckin.note || "")}`;
+    body = `<div class="btns">${link(s.onlineCheckin.url, s.onlineCheckin.label, true)}${link(maps(s.address), "Map")}</div><dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>`;
   } else if (a.k === "stay") {
     eyebrow = "Where you are";
     title = `Staying at ${esc(s.title)}`;
@@ -347,7 +357,7 @@ function lodgingCard(s, label) {
       ${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>${copyBtn(s.phone)}` : "")}
     </dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}
-    <div class="btns">${link(maps(s.address), "Open in Maps", true)}${link(s.link, "Manage booking")}</div>
+    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${s.onlineCheckin ? link(s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !s.onlineCheckin)}${link(s.link, "Manage booking")}</div>
   </section>`;
 }
 
@@ -403,7 +413,7 @@ function renderNow() {
     if (st) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
     const nextSegs = trip.segments.filter(s => ms(s.start) > t0).slice(0, 5);
     if (nextSegs.length) html += `<section class="card"><div class="eyebrow">Next in this trip</div><ul class="next">
-      ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${esc(segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}</span></li>`).join("")}</ul></section>`;
+      ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${esc(segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${quickBtn(s) ? `<br>${quickBtn(s)}` : ""}</span></li>`).join("")}</ul></section>`;
     if ((trip.watch || []).length) html += trip.watch.map(w => `<div class="flag">${esc(w)}</div>`).join("");
   }
   return html;
@@ -440,7 +450,14 @@ function segBlock(s) {
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
-    <div class="btns">${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+    <div class="btns">${s.onlineCheckin ? link(s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+}
+
+function quickRow(t) {
+  const items = t.segments.filter(x => checkinLink(x) && ms(x.end) > Date.now());
+  if (!items.length) return "";
+  const label = x => x.type === "flight" ? `${x.flightNumber.split(" ")[0]} · ${DD(x.start)}` : x.title.split(",")[0];
+  return `<div class="card"><div class="eyebrow">Quick check-in</div><div class="btns">${items.map(x => link(checkinLink(x), label(x))).join("")}</div></div>`;
 }
 
 function renderTrips(past) {
@@ -458,7 +475,7 @@ function renderTrips(past) {
       <div class="muted">${esc(t.place)}</div>
       <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
-      </summary><div class="trip-body">${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${t.segments.map(segBlock).join("")}</div></details>`;
+      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${t.segments.map(segBlock).join("")}</div></details>`;
   });
   return html;
 }
