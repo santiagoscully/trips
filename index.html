@@ -244,8 +244,9 @@ const now = () => state.override ?? Date.now();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const first = n => esc(String(n).split(" ")[0]);
 // Open the airline/hotel/car app instead of its website when it's installed.
-// Android: an intent: link launches the app (package names from each site's assetlinks.json / Play Store)
-// and Chrome falls back to the website if the app isn't there. iPhone: plain https links already
+// Android: Chrome only opens apps through their browsable link handlers, so we hand the same https
+// link to the app's package (package names from each site's assetlinks.json / Play Store). If the app
+// can't take that link (or isn't installed), Chrome opens its Play Store page, whose Open button launches it. iPhone: plain https links already
 // hand off to apps that claim them (United, Hilton...), so they stay as they are.
 const APPS = [
   [/(^|\.)united\.com$/, "com.united.mobile.android"],
@@ -271,7 +272,9 @@ const appHref = u => {
   if (/(^|\.)google\.com$/.test(url.hostname) && url.pathname.startsWith("/maps"))
     return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=com.google.android.apps.maps;${back}`;
   const app = APPS.find(([re]) => re.test(url.hostname));
-  return app ? `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${app[1]};${back}` : u;
+  if (!app) return u;
+  const store = `S.browser_fallback_url=${encodeURIComponent(`https://play.google.com/store/apps/details?id=${app[1]}`)};end`;
+  return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${app[1]};${store}`;
 };
 const hrefAttrs = u => { const h = appHref(u); return h === u ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(h)}"`; };
 const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" ${hrefAttrs(href)}>${esc(label)} ↗</a>` : "";
@@ -280,7 +283,11 @@ const codeRow = (label, v) => v ? `<dt>${esc(label)}</dt><dd><span class="code">
 const row = (label, v) => v ? `<dt>${esc(label)}</dt><dd>${v}</dd>` : "";
 // The one link that takes you straight to checking in for a flight or hotel
 const checkinLink = s => s.type === "flight" ? s.airline?.checkin : s.onlineCheckin?.url;
-const quickBtn = s => { const u = checkinLink(s); return u ? `<a class="btn mini" ${hrefAttrs(u)}>Check in ↗</a>` : ""; };
+// Check-in buttons carry data-ck=<segment>; after each render only the first (top) one per segment stays.
+const ckKey = s => `${s.id}|${s.start}`;
+const ckTag = (s, html) => html.replace("<a ", `<a data-ck="${esc(ckKey(s))}" `);
+const ckLink = (s, href, label, primary) => ckTag(s, link(href, label, primary));
+const quickBtn = s => { const u = checkinLink(s); return u ? ckTag(s, `<a class="btn mini" ${hrefAttrs(u)}>Check in ↗</a>`) : ""; };
 const maps = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 const directions = (o, d) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`;
 const status = f => `https://www.google.com/search?q=${encodeURIComponent(f.flightNumber.split(" ")[0] + " flight status")}`;
@@ -346,7 +353,7 @@ function actionCard(a, t) {
     eyebrow = "Check-in is open";
     title = `Check in for ${esc(s.flightNumber)} to ${esc(city(s))}`;
     sub = `Departs ${DT(s.start)} from ${esc(apName(s.from))} (${esc(s.from)}). Arrives ${arrives(s)}. Check-in opened ${when(opened, s.start)}.`;
-    body = `<div class="btns">${link(s.airline.checkin, `Check in on ${s.airline.name}`, true)}${link(status(s), "Flight status")}</div>
+    body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${link(status(s), "Flight status")}</div>
       <dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "airport") {
     const lead = (s.international ? 3 : 2);
@@ -355,7 +362,7 @@ function actionCard(a, t) {
     const tg = termGate(s.departure);
     title = (dm ? `Leave home by ${timeAt(ms(s.start) - lead * H - dm * M, s.start)} for ${esc(apName(s.from))} airport` : `Head to ${esc(apName(s.from))} airport`) + (s.departure?.terminal ? `, ${esc(s.departure.terminal.split(",")[0])}` : "");
     sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}${dm ? `; the drive from ${esc(HOME.address)} is about ${dm} min` : ""}.${tg ? ` Departs from ${esc(tg)}.` : ""}${s.departure?.gate ? "" : " Gate not posted yet."}`;
-    body = `<div class="btns">${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", true)}${link(s.airline.checkin, "Boarding pass")}${link(status(s), "Gate & status")}</div>
+    body = `<div class="btns">${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", true)}${ckLink(s, s.airline.checkin, "Boarding pass")}${link(status(s), "Gate & status")}</div>
       ${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}<dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "gohome") {
     eyebrow = "Welcome back";
@@ -378,7 +385,7 @@ function actionCard(a, t) {
     title = `Make your connection to ${esc(a.conn.flightNumber)}`;
     sub = `Departs ${T(a.conn.start)} to ${esc(apName(a.conn.to))}${termGate(a.conn.departure) ? ` from ${esc(termGate(a.conn.departure))}` : ""}. You have ${rel(ms(a.conn.start) - now()).replace("in ", "")} left.`;
     body = `<ul class="steps"><li>${esc(s.arrival?.bags || "")}</li></ul>
-      <div class="btns">${link(a.conn.airline.checkin, `Check in on ${a.conn.airline.name}`, true)}${link(status(a.conn), "Gate & status")}</div>
+      <div class="btns">${ckLink(a.conn, a.conn.airline.checkin, `Check in on ${a.conn.airline.name}`, true)}${link(status(a.conn), "Gate & status")}</div>
       <dl class="kv">${codeRow("Confirmation", a.conn.confirmation)}</dl>${paxList(a.conn.travelers)}`;
   } else if (a.k === "goto") {
     const tgt = a.targets[0], lodging = a.targets.find(x => x.type === "lodging");
@@ -408,7 +415,7 @@ function actionCard(a, t) {
     eyebrow = "Hotel check-in";
     title = `Check in online for ${esc(s.title)}`;
     sub = `Rooms are ready from ${DT(s.start)}. ${esc(s.onlineCheckin.note || "")}`;
-    body = `<div class="btns">${link(s.onlineCheckin.url, s.onlineCheckin.label, true)}${link(maps(s.address), "Map")}</div><dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>`;
+    body = `<div class="btns">${ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true)}${link(maps(s.address), "Map")}</div><dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>`;
   } else if (a.k === "stay") {
     eyebrow = "Where you are";
     title = `Staying at ${esc(s.title)}`;
@@ -448,7 +455,7 @@ function lodgingCard(s, label) {
       ${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>${copyBtn(s.phone)}` : "")}
     </dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}
-    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${s.onlineCheckin ? link(s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !s.onlineCheckin)}${link(s.link, "Manage booking")}</div>
+    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${s.onlineCheckin ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !s.onlineCheckin)}${link(s.link, "Manage booking")}</div>
   </section>`;
 }
 
@@ -538,14 +545,14 @@ function segBlock(s) {
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
       <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
-      <div class="btns">${link(s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Status")}</div></div></div>`;
+      <div class="btns">${ckLink(s, s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Status")}</div></div></div>`;
   }
   const label = { lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type;
   return `<div class="seg"><div class="seg-main"><span class="seg-type">${label}</span><h4>${esc(s.title)}</h4>
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
-    <div class="btns">${s.onlineCheckin ? link(s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+    <div class="btns">${s.onlineCheckin ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
 }
 
 // "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
@@ -561,7 +568,7 @@ function quickRow(t) {
   const items = t.segments.filter(x => checkinLink(x) && ms(x.end) > Date.now());
   if (!items.length) return "";
   const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
-  return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`).join("")}</div>`;
+  return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
 }
 
 function renderTrips(past) {
@@ -619,6 +626,8 @@ function render() {
   sel.value = state.person;
   const body = state.view === "now" ? renderNow() : renderTrips(state.view === "past");
   app.innerHTML = renderBanner() + body;
+  const seen = new Set();
+  app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
 }
 
 function tick() {
