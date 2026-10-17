@@ -254,7 +254,7 @@ const first = n => esc(String(n).split(" ")[0]);
 const APPS = [
   [/(^|\.)united\.com$/, "com.united.mobile.android"],
   [/(^|\.)(hgvc|hiltongrandvacations)\.com$/, "com.hilton.grandvacations"],
-  [/(^|\.)hilton\.com$/, "com.hilton.android.hhonors"],
+  // Hilton Honors: tested 2026-10-17, the app accepts none of hilton.com's links, so Hilton buttons open the website.
   [/(^|\.)avis\.com$/, "com.avis.androidapp"],
   [/(^|\.)southwest\.com$/, "com.southwestairlines.mobile"],
   [/(^|\.)swiss\.com$/, "com.yoc.swiss.swiss"],
