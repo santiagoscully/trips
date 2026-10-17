@@ -117,6 +117,9 @@ main{display:grid;gap:20px;padding-top:20px}
 .chip.soon{background:var(--now-soft);color:var(--now)}
 .about summary{cursor:pointer;color:var(--muted);font-size:13px}
 .about p{font-size:13px;color:var(--muted);margin:6px 0}
+.ckrow{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
+.eyebrow + .ckrow{border-top:0}
+.ckrow .btn{justify-self:start}
 .ends{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .ends b{font-family:var(--body);color:var(--ink);margin-right:4px}
 .trip-body{padding:0 18px 18px;display:grid;gap:12px}
@@ -212,7 +215,7 @@ function allPeople() {
   const rest = [...all].filter(n => n !== MAIN).sort();
   return [MAIN, ...rest];
 }
-const h = (location.hash || "").slice(1); if (["now","trips","past"].includes(h)) state.view = h;
+const h = (location.hash || "").slice(1); if (["now","trips","past","checkin"].includes(h)) state.view = h;
 
 // ---------- time helpers: every ISO string carries its own local offset ----------
 const ms = iso => Date.parse(iso);
@@ -572,6 +575,22 @@ function quickRow(t) {
   return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
 }
 
+// Opened from the home-screen shortcut: one big button per upcoming check-in (next 14 days first)
+function renderCheckin() {
+  const t0 = Date.now();
+  const items = tripsFor(state.person).flatMap(t => t.segments.map(x => ({ t, x })))
+    .filter(({ x }) => checkinLink(x) && ms(x.start) > t0 - 6 * H)
+    .sort((a, b) => ms(a.x.start) - ms(b.x.start)).slice(0, 6);
+  if (!items.length) return `<div class="empty">Nothing to check in for right now.</div>`;
+  return `<section class="card"><div class="eyebrow">Check in</div>${items.map(({ t, x }) => {
+    const label = x.type === "flight" ? `${x.airline.name} ${x.flightNumber.split(" ")[0]} · ${x.from} → ${x.to}` : x.title;
+    const opens = x.type === "flight" ? ms(x.start) - (x.airline.checkinHours || 24) * H : ms(x.start) - (x.onlineCheckin.opensHours || 24) * H;
+    const status = opens <= t0 ? "Check-in is open" : `Opens ${when(opens, x.start)}`;
+    return `<div class="ckrow"><div><b>${esc(label)}</b><div class="muted">${DT(x.start)} · ${esc(t.title)}</div><div class="note">${status}${x.confirmation ? ` · <span class="code">${esc(x.confirmation)}</span>` : ""}</div></div>
+      ${link(checkinLink(x), "Check in", opens <= t0)}</div>`;
+  }).join("")}</section>`;
+}
+
 function renderTrips(past) {
   const t0 = Date.now();
   const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
@@ -625,7 +644,7 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? renderNow() : renderTrips(state.view === "past");
+  const body = state.view === "now" ? renderNow() : state.view === "checkin" ? renderCheckin() : renderTrips(state.view === "past");
   app.innerHTML = renderBanner() + body;
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
@@ -716,6 +735,8 @@ document.getElementById("lock").addEventListener("click", () => {
 });
 load();
 // refresh data when the app comes back to the foreground
+// shortcuts open "#checkin" / "#now" / "#trips" even when the app is already open
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","past","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !state.locked && blob) load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
