@@ -153,6 +153,8 @@ footer{color:var(--muted);font-size:13px;padding-top:12px}
 const H = 3600e3, M = 60e3, D = 24 * H;
 const AIRPORTS = {SJC:"San José",DEN:"Denver",SFO:"San Francisco",HNL:"Honolulu",TPA:"Tampa",LAS:"Las Vegas",ZRH:"Zurich",BCN:"Barcelona",LIN:"Milan Linate",PTY:"Panama City",COR:"Córdoba"};
 let MAIN = "";
+let HOME = null; // {address, airports: {SJC: minutes, ...}}
+const driveMin = code => HOME?.airports?.[code];
 const state = { trips: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
 
 try { const v = localStorage.getItem("tb-view"); if (v) state.view = v; } catch (e) {}
@@ -234,8 +236,9 @@ function actionsFor(trip) {
     if (s.type === "flight") {
       const lead = (s.international ? 3 : 2) * H;
       const ck = st - (s.airline.checkinHours || 24) * H;
-      acts.push({ k: "checkin", from: ck, to: st - lead, s, p: 5 });
-      acts.push({ k: "airport", from: st - lead, to: st, s, p: 6 });
+      acts.push({ k: "checkin", from: ck, to: st - lead - (driveMin(s.from) || 0) * M - 30 * M, s, p: 5 });
+      const drive = (driveMin(s.from) || 0) * M;
+      acts.push({ k: "airport", from: st - lead - drive - 30 * M, to: st, s, p: 6 });
       acts.push({ k: "inair", from: st, to: en, s, p: 9 });
       acts.push({ k: "bags", from: en, to: en + 40 * M, s, p: 8 });
       const conn = segs[i + 1] && segs[i + 1].type === "flight" && ms(segs[i + 1].start) - en < 5 * H ? segs[i + 1] : null;
@@ -246,6 +249,7 @@ function actionsFor(trip) {
         if (lodging && !targets.includes(lodging)) targets.push(lodging);
         targets.sort((a, b) => (a.type === "lodging") - (b.type === "lodging"));
         if (targets.length) acts.push({ k: "goto", from: en + 40 * M, to: en + 4 * H, s, targets, p: 7 });
+        else if (driveMin(s.to)) acts.push({ k: "gohome", from: en + 40 * M, to: en + 3 * H, s, p: 7 });
       }
     } else if (s.type === "lodging") {
       acts.push({ k: "stay", from: st, to: en, s, p: 1 });
@@ -274,10 +278,16 @@ function actionCard(a, t) {
   } else if (a.k === "airport") {
     const lead = (s.international ? 3 : 2);
     eyebrow = "Time to go";
-    title = `Head to ${esc(apName(s.from))} airport`;
-    sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}.`;
-    body = `<div class="btns">${link(maps(s.from + " airport"), "Map to airport", true)}${link(s.airline.checkin, "Boarding pass")}${link(status(s), "Gate & status")}</div>
+    const dm = driveMin(s.from);
+    title = dm ? `Leave home by ${timeAt(ms(s.start) - lead * H - dm * M, s.start)} for ${esc(apName(s.from))} airport` : `Head to ${esc(apName(s.from))} airport`;
+    sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}${dm ? `; the drive from ${esc(HOME.address)} is about ${dm} min` : ""}.`;
+    body = `<div class="btns">${link(dm ? directions(HOME.address, s.from + " airport") : maps(s.from + " airport"), dm ? "Directions from home" : "Map to airport", true)}${link(s.airline.checkin, "Boarding pass")}${link(status(s), "Gate & status")}</div>
       <dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
+  } else if (a.k === "gohome") {
+    eyebrow = "Welcome back";
+    title = "Head home";
+    sub = `About ${driveMin(s.to)} min from ${esc(apName(s.to))} to ${esc(HOME.address)}.`;
+    body = `<ul class="steps"><li><b>Baggage claim</b>${esc(s.arrival?.bags || "Follow signs to baggage claim.")}</li></ul><div class="btns">${link(directions(s.to + " airport", HOME.address), "Directions home", true)}</div>`;
   } else if (a.k === "inair") {
     eyebrow = "In the air";
     title = `${esc(s.flightNumber)} to ${esc(city(s))}`;
@@ -347,6 +357,13 @@ function actionCard(a, t) {
   return { eyebrow, title, sub, body };
 }
 
+function flightNowCard(f) {
+  const dm = driveMin(f.from), lead = f.international ? 3 : 2;
+  const fromHome = dm ? `<div class="flag ok">Leave ${esc(HOME.address)} by ${timeAt(ms(f.start) - lead * H - dm * M, f.start)} on ${DD(f.start)}: about ${dm} min to ${esc(apName(f.from))} and ${lead} h at the airport.</div>
+    <div class="btns">${link(directions(HOME.address, f.from + " airport"), "Directions to the airport", true)}</div>` : "";
+  return `<section class="card" aria-label="Your next flight"><div class="eyebrow">Your next flight</div>${fromHome}${segBlock(f)}</section>`;
+}
+
 function lodgingCard(s, label) {
   return `<section class="card" aria-label="${esc(label)}">
     <div class="eyebrow">${esc(label)}</div>
@@ -410,7 +427,11 @@ function renderNow() {
     const stayNow = pool.find(s => ms(s.start) - 8 * H <= t0 && t0 < ms(s.end));
     const stayNext = pool.find(s => ms(s.start) > t0);
     const st = stayNow || stayNext;
-    if (st) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
+    // Until you've landed, the next flight matters more than the hotel at the other end.
+    const nextFlight = trip.segments.find(s => s.type === "flight" && ms(s.end) > t0);
+    const flyFirst = nextFlight && (!st || ms(nextFlight.end) <= ms(st.start) + 24 * H);
+    if (flyFirst) html += flightNowCard(nextFlight);
+    else if (st) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
     const nextSegs = trip.segments.filter(s => ms(s.start) > t0).slice(0, 5);
     if (nextSegs.length) html += `<section class="card"><div class="eyebrow">Next in this trip</div><ul class="next">
       ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${esc(segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${quickBtn(s) ? `<br>${quickBtn(s)}` : ""}</span></li>`).join("")}</ul></section>`;
@@ -561,7 +582,7 @@ async function decrypt(pass) {
   return JSON.parse(new TextDecoder().decode(pt));
 }
 function apply(data) {
-  MAIN = data.main;
+  MAIN = data.main; HOME = data.home || null;
   if (!state.person) state.person = MAIN;
   state.trips = (data.trips || []).sort((a, b) => ms(a.start) - ms(b.start));
   state.status = data.status || null;
