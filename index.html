@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trip Board</title>
-<meta name="theme-color" content="#16202A">
+<meta name="theme-color" content="#10284A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" href="icons/icon-192.png">
@@ -17,10 +17,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 :root{
-  --bg:#F1F4F1; --surface:#FFFFFF; --surface-2:#E8EDEA; --ink:#16202A; --muted:#5A6873; --line:#D3DBD6;
-  --accent:#1D5BBF; --accent-ink:#FFFFFF; --accent-soft:#E2EBFA;
-  --now:#A86A12; --now-soft:#FBF0DC; --good:#2E7A4D; --good-soft:#E0F1E6; --bad:#B23838; --bad-soft:#F8E3E1;
-  --shadow:0 1px 2px rgba(22,32,42,.06),0 6px 20px rgba(22,32,42,.06);
+  --bg:#EDF2F9; --surface:#FFFFFF; --surface-2:#F2F6FC; --ink:#0F1B2D; --muted:#5A6A82; --line:#DCE4EF;
+  --accent:#2E5BEA; --accent-ink:#FFFFFF; --accent-soft:#E5ECFF;
+  --now:#E0571B; --now-soft:#FFEDE3; --good:#0B8F7D; --good-soft:#DBF3EE; --bad:#D63864; --bad-soft:#FCE4EC;
+  --sky:#10284A; --sky-2:#1B3D6E; --on-sky:#FFFFFF; --on-sky-muted:rgba(255,255,255,.72);
+  --shadow:0 1px 2px rgba(15,27,45,.05),0 8px 24px rgba(30,60,120,.08);
   --display:"Archivo","Helvetica Neue",Arial,sans-serif;
   --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
@@ -28,18 +29,20 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme:dark;
-    --bg:#0E1317; --surface:#161E24; --surface-2:#1D272E; --ink:#E6ECE8; --muted:#94A3AC; --line:#2A363E;
-    --accent:#76A5F2; --accent-ink:#0E1317; --accent-soft:#1B2A40;
-    --now:#E4AE55; --now-soft:#2E2414; --good:#6CC28E; --good-soft:#15291D; --bad:#EC8A82; --bad-soft:#341A19;
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+    --bg:#0A1220; --surface:#121C2E; --surface-2:#18243A; --ink:#E7EDF7; --muted:#97A6BD; --line:#26344C;
+    --accent:#7C9CFF; --accent-ink:#0A1220; --accent-soft:#1C2A4D;
+    --now:#FF9A62; --now-soft:#3A2216; --good:#4FD1B8; --good-soft:#123A33; --bad:#FF7FA0; --bad-soft:#3D1826;
+    --sky:#0C1B33; --sky-2:#16305A; --on-sky:#FFFFFF; --on-sky-muted:rgba(255,255,255,.7);
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.3);
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
-  --bg:#0E1317; --surface:#161E24; --surface-2:#1D272E; --ink:#E6ECE8; --muted:#94A3AC; --line:#2A363E;
-  --accent:#76A5F2; --accent-ink:#0E1317; --accent-soft:#1B2A40;
-  --now:#E4AE55; --now-soft:#2E2414; --good:#6CC28E; --good-soft:#15291D; --bad:#EC8A82; --bad-soft:#341A19;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  --bg:#0A1220; --surface:#121C2E; --surface-2:#18243A; --ink:#E7EDF7; --muted:#97A6BD; --line:#26344C;
+  --accent:#7C9CFF; --accent-ink:#0A1220; --accent-soft:#1C2A4D;
+  --now:#FF9A62; --now-soft:#3A2216; --good:#4FD1B8; --good-soft:#123A33; --bad:#FF7FA0; --bad-soft:#3D1826;
+  --sky:#0C1B33; --sky-2:#16305A; --on-sky:#FFFFFF; --on-sky-muted:rgba(255,255,255,.7);
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.3);
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -156,6 +159,36 @@ main{display:grid;gap:20px;padding-top:20px}
 .preview .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .preview input{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 footer{color:var(--muted);font-size:13px;padding-top:12px}
+/* ---------- colour refresh ---------- */
+header.top{background:linear-gradient(180deg,var(--sky),var(--sky-2));color:var(--on-sky);border-bottom:0;box-shadow:0 0 0 100vmax var(--sky);clip-path:inset(0 -100vmax);padding-block:14px 14px}
+header.top h1{color:var(--on-sky)}
+header.top .clock,.who{color:var(--on-sky-muted)}
+.who select{background:rgba(255,255,255,.12);color:var(--on-sky);border-color:rgba(255,255,255,.25)}
+.who select option{color:#0F1B2D}
+.tab{background:rgba(255,255,255,.1);color:var(--on-sky);border-color:rgba(255,255,255,.22)}
+.tab[aria-selected="true"]{background:#fff;color:var(--sky);border-color:#fff}
+.hero,.card,.trip,.seg{border-radius:18px;box-shadow:var(--shadow);border-color:transparent}
+.seg{box-shadow:none;border:1px solid var(--line)}
+.hero-head{background:linear-gradient(135deg,var(--now-soft),var(--surface));border-bottom:0}
+.hero-head.calm{background:linear-gradient(135deg,var(--accent-soft),var(--surface))}
+.hero-head.calm .eyebrow{color:var(--accent)}
+.eyebrow{color:var(--accent)}
+.month{color:var(--accent);display:flex;align-items:center;gap:10px}
+.month::after{content:"";flex:1;height:1px;background:var(--line)}
+.trip{border-top:6px solid var(--tc, var(--accent))}
+.trip h3{color:var(--ink)}
+.chip{background:var(--accent-soft);color:var(--accent)}
+.chip.fam{background:var(--good-soft);color:var(--good)}
+.route{background:var(--accent-soft);border-radius:12px;padding:10px 12px}
+.route .ap{color:var(--accent)}
+.route .mid{color:var(--accent)}
+.stub{background:var(--surface-2)}
+.steps li{background:var(--surface-2);border-left:3px solid var(--accent)}
+.btn.primary{background:linear-gradient(180deg,#3D6BF5,var(--accent));box-shadow:0 2px 6px rgba(46,91,234,.3)}
+.ckrow .btn.primary{box-shadow:none}
+.next li .when{color:var(--accent)}
+.banner.alert{border:0;background:var(--bad-soft)}
+footer .about summary{color:var(--muted)}
 @media (max-width:480px){
   .route .ap{font-size:28px}
   .kv{grid-template-columns:1fr;gap:2px 0}.kv dt{margin-top:8px;font-size:13px}
@@ -701,6 +734,9 @@ function renderCheckin() {
   }).join("")}</section>`;
 }
 
+// each trip card gets its own colour band
+const TRIP_COLORS = ["#2E5BEA", "#E0571B", "#0B8F7D", "#8B5CF6", "#D9A100", "#D63864"];
+
 function renderTrips(past) {
   const t0 = Date.now();
   const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
@@ -711,7 +747,7 @@ function renderTrips(past) {
     const p = parts(ms(t.start), offMin(t.start)), mk = `${MO[p.mo]} ${p.y}`;
     if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     const soon = !past && ms(t.start) - t0 < 7 * D;
-    html += `<details class="trip"><summary>
+    html += `<details class="trip" style="--tc:${TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
       <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
       <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
