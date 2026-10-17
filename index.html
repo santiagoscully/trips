@@ -480,9 +480,9 @@ function segBlock(s) {
 function tripEnds(t) {
   const fl = t.segments.filter(x => x.type === "flight");
   const out = fl[0], back = fl.length > 1 ? fl[fl.length - 1] : null;
-  const leave = out ? `${DT(out.start)} (${esc(out.from)})` : DT(t.start);
-  const ret = back ? `${DT(back.end)} (${esc(back.to)})` : out ? null : DT(t.end);
-  return `<div class="ends"><span><b>Leave</b> ${leave}</span>${ret ? `<span><b>${back ? "Back" : "Until"}</b> ${ret}</span>` : (out ? `<span><b>Arrive</b> ${DT(out.end)} (${esc(out.to)})</span>` : "")}</div>`;
+  const leave = out ? `${DD(out.start)} (${esc(out.from)})` : DD(t.start);
+  const end = back ? ["Back", `${DD(back.end)} (${esc(back.to)})`] : out ? ["Arrive", `${DD(out.end)} (${esc(out.to)})`] : ["Until", DD(t.end)];
+  return `<div class="ends"><span><b>Leave</b> ${leave}</span><span><b>${end[0]}</b> ${end[1]}</span></div>`;
 }
 
 function quickRow(t) {
@@ -503,7 +503,7 @@ function renderTrips(past) {
     if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     const soon = !past && ms(t.start) - t0 < 7 * D;
     html += `<details class="trip"${i === 0 && !past ? " open" : ""}><summary>
-      <div class="trip-top"><h3>${esc(t.title)}</h3><span class="dates">${rangeStr(t.start, t.end)}</span></div>
+      <div class="trip-top"><h3>${esc(t.title)}</h3></div>
       <div class="muted">${esc(t.place)}</div>
       <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
