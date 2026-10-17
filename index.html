@@ -267,6 +267,11 @@ const APPS = [
   [/(^|\.)ihg\.com$/, "com.ihg.apps.android"],
 ];
 const ANDROID = /Android/i.test(navigator.userAgent);
+// Some apps only accept certain links. On Android, swap a link the app ignores for one it opens
+// (the app's own screen has the same action): United opens My Trips, where check-in is one tap.
+const APP_LINK_SWAPS = [
+  [/(^|\.)united\.com$/, /^\/[a-z]{2}\/[a-z]{2}\/checkin/i, "/en/us/manageres/mytrips"],
+];
 const appHref = u => {
   if (!ANDROID || !u) return u;
   let url; try { url = new URL(u); } catch (_) { return u; }
@@ -276,6 +281,8 @@ const appHref = u => {
     return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=com.google.android.apps.maps;${back}`;
   const app = APPS.find(([re]) => re.test(url.hostname));
   if (!app) return u;
+  const swap = APP_LINK_SWAPS.find(([host, path]) => host.test(url.hostname) && path.test(url.pathname));
+  if (swap) { url.pathname = swap[2]; url.search = ""; }
   // If the app doesn't accept this exact link (apps only take some paths, e.g. Hilton's account page),
   // Chrome opens the same page on the website instead, where check-in always works.
   return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${app[1]};${back}`;
