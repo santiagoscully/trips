@@ -55,7 +55,19 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h1{font-family:var(--display);font-stretch:85%;font-weight:800;font-size:28px;letter-spacing:-.01em;margin:0;text-wrap:balance}
 .clock{font-family:var(--mono);font-size:13px;color:var(--muted)}
-.tabs{display:flex;gap:6px;margin-top:12px}
+.tabs{display:flex;gap:6px;margin-top:12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none}
+.run{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:8px}
+.run-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.run-head b{font-size:15px}.run-head span{font-size:12px;color:var(--muted)}
+.run ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.run li{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.ch{flex:none;font:700 11px/1 var(--body);text-transform:uppercase;letter-spacing:.04em;padding:4px 6px;border-radius:6px}
+.ch-added{background:var(--good-soft);color:var(--good)}.ch-changed{background:var(--now-soft);color:var(--now)}
+.ch-removed{background:var(--bad-soft);color:var(--bad)}.ch-note{background:var(--surface-2);color:var(--muted)}
+.run .trip-name{color:var(--muted);font-size:12px}
+.banner a{color:inherit;font-weight:700}
 .who{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--muted);flex-wrap:wrap}
 .who select{font:700 15px/1.2 var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
 .who select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -167,6 +179,7 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .who select{background:rgba(255,255,255,.12);color:var(--on-sky);border-color:rgba(255,255,255,.25)}
 .who select option{color:#0F1B2D}
 .tab{background:rgba(255,255,255,.1);color:var(--on-sky);border-color:rgba(255,255,255,.22)}
+@media (max-width:420px){.tabs{gap:4px}.tab{padding:8px 9px;font-size:12.5px}}
 .tab[aria-selected="true"]{background:#fff;color:var(--sky);border-color:#fff}
 .hero,.card,.trip,.seg{border-radius:18px;box-shadow:var(--shadow);border-color:transparent}
 .seg{box-shadow:none;border:1px solid var(--line)}
@@ -233,6 +246,7 @@ footer .about summary{color:var(--muted)}
       <button class="tab" role="tab" id="tab-trips" data-view="trips" aria-selected="false">Upcoming</button>
       <button class="tab" role="tab" id="tab-local" data-view="local" aria-selected="false">Local</button>
       <button class="tab" role="tab" id="tab-past" data-view="past" aria-selected="false">Past</button>
+      <button class="tab" role="tab" id="tab-changes" data-view="changes" aria-selected="false">Changes</button>
     </nav>
   </header>
   <main id="app"><div class="empty">Loading trips…</div></main>
@@ -818,14 +832,35 @@ function localToday() {
   return `<section class="card" aria-label="Today nearby"><div class="eyebrow">Today nearby</div>${items.map(segBlock).join("")}</section>`;
 }
 
+// Each check (daily or on request) is a run: {at, kind, summary, changes:[{type: added|changed|removed|note, text, tripId}]}, newest first.
+const runsOf = s => (s?.runs || []).slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+const BANNER_HOURS = 24;  // the red banner shows a run's changes for a day, then they live only in the Changes tab
 function renderBanner() {
   const s = state.status;
   if (!s) return "";
-  const alerts = (s.alerts || []).filter(a => !a.dismissed);
   const checked = s.lastChecked ? `Last checked ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "";
   const about = document.getElementById("about-checked"); if (about) about.textContent = checked;
-  if (alerts.length) return `<div class="banner alert"><strong>${alerts.length} change${alerts.length > 1 ? "s" : ""} found</strong>${alerts.map(a => `<span>${esc(a.date ? a.date + ": " : "")}${esc(a.text)}</span>`).join("")}</div>`;
-  return "";
+  if (state.view === "changes") return "";
+  const fresh = runsOf(s).filter(r => Date.now() - Date.parse(r.at) < BANNER_HOURS * H).flatMap(r => r.changes || []);
+  if (!fresh.length) return "";
+  return `<div class="banner alert"><strong>${fresh.length} change${fresh.length > 1 ? "s" : ""} in the last day</strong>${fresh.slice(0, 4).map(c => `<span>${esc(c.text)}</span>`).join("")}<span><a href="#changes">${fresh.length > 4 ? `See all ${fresh.length} in Changes` : "History in Changes"} ›</a></span></div>`;
+}
+const tripName = id => id === "local" ? "Local" : (state.trips.find(t => t.id === id)?.title || "");
+const runWhen = at => new Date(at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+function renderChanges() {
+  const runs = runsOf(state.status);
+  if (!runs.length) return `<div class="empty">No checks recorded yet. Every check adds an entry here, newest first.</div>`;
+  const label = { added: "Added", changed: "Changed", removed: "Removed", note: "Note" };
+  let html = "", lastDay = "";
+  runs.forEach(r => {
+    const day = new Date(r.at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    if (day !== lastDay) { html += `<div class="month">${day}</div>`; lastDay = day; }
+    const ch = r.changes || [];
+    html += `<section class="run"><div class="run-head"><b>${esc(runWhen(r.at))}</b><span>${r.kind === "daily" ? "Scheduled check" : "Check on request"}</span></div>
+      ${r.summary ? `<div class="muted" style="font-size:13px">${esc(r.summary)}</div>` : ""}
+      ${ch.length ? `<ul>${ch.map(c => `<li><span class="ch ch-${esc(c.type || "note")}">${label[c.type] || "Note"}</span><div>${esc(c.text)}${tripName(c.tripId) ? `<div class="trip-name">${esc(tripName(c.tripId))}</div>` : ""}</div></li>`).join("")}</ul>` : `<div class="muted" style="font-size:13px">No changes.</div>`}</section>`;
+  });
+  return html;
 }
 
 function renderCredits() {
@@ -858,7 +893,7 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : renderTrips(state.view === "past");
+  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "changes" ? renderChanges() : renderTrips(state.view === "past");
   app.innerHTML = renderBanner() + body;
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
@@ -951,7 +986,7 @@ document.getElementById("lock").addEventListener("click", () => {
 load();
 // refresh data when the app comes back to the foreground
 // shortcuts open "#checkin" / "#now" / "#trips" even when the app is already open
-window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","past","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","past","changes","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !state.locked && blob) load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
