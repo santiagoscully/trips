@@ -133,6 +133,7 @@ main{display:grid;gap:20px;padding-top:20px}
 .ic-lodging,.ic-home{background:var(--good-soft);color:var(--good)}
 .ic-car,.ic-transfer,.ic-ride{background:var(--now-soft);color:var(--now)}
 .ic-activity{background:var(--surface-2);color:var(--muted)}
+.ic-restaurant{background:#FDECEA;color:#C0392B}.ic-movie{background:#EDE7F6;color:#5E35B1}.ic-show{background:#FFF4E0;color:#B26A00}
 .logo{width:18px;height:18px;border-radius:4px;vertical-align:-4px;margin-right:6px;background:#fff;object-fit:contain}
 .seg.branded{border-left:5px solid var(--brand, var(--line))}
 .ckrow{border-left:4px solid var(--brand, transparent);padding-left:10px}
@@ -230,6 +231,7 @@ footer .about summary{color:var(--muted)}
     <nav class="tabs" role="tablist" aria-label="Views">
       <button class="tab" role="tab" id="tab-now" data-view="now" aria-selected="true">Now</button>
       <button class="tab" role="tab" id="tab-trips" data-view="trips" aria-selected="false">Upcoming</button>
+      <button class="tab" role="tab" id="tab-local" data-view="local" aria-selected="false">Local</button>
       <button class="tab" role="tab" id="tab-past" data-view="past" aria-selected="false">Past</button>
     </nav>
   </header>
@@ -247,7 +249,7 @@ const AIRPORTS = {SJC:"San José",DEN:"Denver",SFO:"San Francisco",HNL:"Honolulu
 let MAIN = "";
 let HOME = null; // {address, airports: {SJC: minutes, ...}}
 const driveMin = code => HOME?.airports?.[code];
-const state = { trips: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
+const state = { trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
 
 try { const v = localStorage.getItem("tb-view"); if (v) state.view = v; } catch (e) {}
 
@@ -615,6 +617,9 @@ const ICONS = {
   car: '<path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11a2 2 0 0 1 2 2v4h-2v2h-3v-2H8v2H5v-2H3v-4a2 2 0 0 1 2-2zm2.2 0h9.6l-1-3H8.2zM6.5 15a1.5 1.5 0 1 0 0-.01zm11 0a1.5 1.5 0 1 0 0-.01z"/>',
   transfer: '<path d="M3 7a2 2 0 0 1 2-2h11l5 5v6h-2a2.5 2.5 0 0 1-5 0H9a2.5 2.5 0 0 1-5 0H3zm2 0v3h4V7zm6 0v3h4V7zm6 1v2h2z"/>',
   activity: '<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4zm6 0v10h2V7z"/>',
+  restaurant: '<path d="M7 2v8a2 2 0 0 1-1.5 1.94V22h-2V11.94A2 2 0 0 1 2 10V2h1.5v6h1V2h1.5v6h1V2zm9 0c2.2 0 4 2.24 4 5v6h-2.5v9h-2V2z"/>',
+  movie: '<path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm1 2v2h2V6zm12 0v2h2V6zM5 10v2h2v-2zm12 0v2h2v-2zM5 14v2h2v-2zm12 0v2h2v-2zm-8-8v12h6V6z"/>',
+  show: '<path d="M12 2l2.9 6.26L22 9.27l-5.2 4.87L18.18 21 12 17.27 5.82 21l1.38-6.86L2 9.27l7.1-1.01z"/>',
   ride: '<path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11a2 2 0 0 1 2 2v4h-2v2h-3v-2H8v2H5v-2H3v-4a2 2 0 0 1 2-2zm2.2 0h9.6l-1-3H8.2zM6.5 15a1.5 1.5 0 1 0 0-.01zm11 0a1.5 1.5 0 1 0 0-.01z"/>',
 };
 // ---------- company branding: color stripe + the company's own site icon ----------
@@ -633,6 +638,8 @@ const BRANDS = [
   { key: "ameron", name: "AMERON", domain: "ameroncollection.com", color: "#3C3C3B", match: /ameron/i },
   { key: "transfermilan", name: "TransferMilan", domain: "transfermilan.com", color: "#1B4D8C", match: /transfermilan/i },
   { key: "lindt", name: "Lindt", domain: "lindt-home-of-chocolate.com", color: "#002E5D", match: /lindt/i },
+  { key: "cinemark", name: "Cinemark", domain: "cinemark.com", color: "#C8102E", match: /cinemark/i },
+  { key: "amc", name: "AMC Theatres", domain: "amctheatres.com", color: "#E21836", match: /amctheatres|\bamc\b/i },
   { key: "opentable", name: "OpenTable", domain: "opentable.com", color: "#DA3743", match: /opentable/i },
   { key: "fcb", name: "FC Barcelona", domain: "fcbarcelona.com", color: "#A50044", match: /fc ?barcelona|fcbarcelona/i },
 ];
@@ -646,7 +653,7 @@ function brandOf(s) {
 const logo = b => b ? `<img class="logo" src="logos/${b.key}.png" alt="${esc(b.name)}" width="18" height="18" loading="lazy" onerror="this.remove()">` : "";
 const brandStyle = s => { const b = brandOf(s); return b ? ` style="--brand:${b.color}"` : ""; };
 
-const kindOf = s => s.type === "lodging" && s.home ? "home" : s.type;
+const kindOf = s => s.type === "lodging" && s.home ? "home" : (s.kind && ICONS[s.kind] ? s.kind : s.type);
 const icon = s => `<span class="ic ic-${kindOf(s)}" aria-hidden="true"><svg viewBox="0 0 24 24">${ICONS[kindOf(s)] || ICONS.activity}</svg></span>`;
 
 // ---------- rides: when nothing is booked between an airport and where you're staying ----------
@@ -718,7 +725,7 @@ function segBlock(s) {
       <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
       <div class="btns">${ckLink(s, s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
-  const label = s.home ? "Family home" : ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
+  const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
   return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
@@ -788,6 +795,29 @@ function renderTrips(past) {
   return html;
 }
 
+// ---------- Local tab: plans around home (restaurants, movies, shows, local hotels) ----------
+const localFor = p => state.local.filter(s => (s.travelers || []).length ? s.travelers.includes(p) : p === MAIN);
+function renderLocal() {
+  const t0 = Date.now(), items = localFor(state.person);
+  const next = items.filter(s => ms(s.end) >= t0), recent = items.filter(s => ms(s.end) < t0 && t0 - ms(s.end) < 30 * D).reverse();
+  let html = "", lastMonth = "";
+  next.forEach(s => {
+    const p = parts(ms(s.start), offMin(s.start)), mk = `${MO[p.mo]} ${p.y}`;
+    if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
+    html += segBlock(s);
+  });
+  if (!next.length) html += `<div class="empty">Nothing planned around home yet. Restaurant reservations, movie and show tickets, and local hotel stays show up here.</div>`;
+  if (recent.length) html += `<details class="trip"><summary><div class="trip-top"><h3>Recent (last 30 days)</h3><span class="chev" aria-hidden="true">›</span></div></summary><div class="trip-body">${recent.map(segBlock).join("")}</div></details>`;
+  return html;
+}
+// On the Now tab: today's local plans, so tonight's dinner or movie is one glance away
+function localToday() {
+  const t0 = Date.now(), today = new Date().toDateString();
+  const items = localFor(state.person).filter(s => ms(s.end) >= t0 && new Date(ms(s.start)).toDateString() === today);
+  if (!items.length) return "";
+  return `<section class="card" aria-label="Today nearby"><div class="eyebrow">Today nearby</div>${items.map(segBlock).join("")}</section>`;
+}
+
 function renderBanner() {
   const s = state.status;
   if (!s) return "";
@@ -828,7 +858,7 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? renderNow() : state.view === "checkin" ? renderCheckin() : renderTrips(state.view === "past");
+  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : renderTrips(state.view === "past");
   app.innerHTML = renderBanner() + body;
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
@@ -884,6 +914,7 @@ function apply(data) {
   if (!state.person) state.person = MAIN;
   state.trips = (data.trips || []).sort((a, b) => ms(a.start) - ms(b.start));
   state.status = data.status || null;
+  state.local = (data.local || []).sort((a, b) => ms(a.start) - ms(b.start));
   state.loaded = true; state.locked = false;
   document.getElementById("lock").hidden = false;
 }
@@ -920,7 +951,7 @@ document.getElementById("lock").addEventListener("click", () => {
 load();
 // refresh data when the app comes back to the foreground
 // shortcuts open "#checkin" / "#now" / "#trips" even when the app is already open
-window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","past","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","past","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !state.locked && blob) load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
