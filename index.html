@@ -899,7 +899,7 @@ function render() {
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
   const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
-  app.innerHTML = renderBanner() + body;
+  app.innerHTML = body + renderBanner();  // recent changes sit at the bottom (user preference); full history is under "Change history"
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
 }
