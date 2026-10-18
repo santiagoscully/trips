@@ -318,6 +318,7 @@ const APPS = [
   [/(^|\.)hyatt\.com$/, "com.Hyatt.hyt"],
   [/(^|\.)marriott\.com$/, "com.marriott.mrt"],
   [/(^|\.)ihg\.com$/, "com.ihg.apps.android"],
+  [/(^|\.)flightradar24\.com$/, "com.flightradar24free"],
 ];
 const ANDROID = /Android/i.test(navigator.userAgent);
 // Some apps only accept certain links. On Android, swap a link the app ignores for one it opens
@@ -354,7 +355,9 @@ const ckLink = (s, href, label, primary) => ckTag(s, link(href, label, primary))
 const quickBtn = s => { const u = checkinLink(s); return u ? ckTag(s, `<a class="btn mini" ${hrefAttrs(u)}>Check in ↗</a>`) : ""; };
 const maps = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 const directions = (o, d) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`;
-const status = f => `https://www.google.com/search?q=${encodeURIComponent(f.flightNumber.split(" ")[0] + " flight status")}`;
+// Live tracking on Flightradar24 (opens its app on Android when installed). Codeshares track the
+// operating flight (`trackAs`, e.g. United UA9725 is flown as SWISS LX39).
+const status = f => `https://www.flightradar24.com/data/flights/${encodeURIComponent((f.trackAs || f.flightNumber.split(" ")[0]).toLowerCase())}`;
 const apName = c => AIRPORTS[c] || c;
 // Map/directions target: the flight's terminal when we know it ("SJC airport Terminal A"), else the airport
 const apPlace = (code, term) => term && !/^main terminal/i.test(term) ? `${code} airport ${term.split(",")[0]}` : `${code} airport`;
@@ -417,7 +420,7 @@ function actionCard(a, t) {
     eyebrow = "Check-in is open";
     title = `Check in for ${esc(s.flightNumber)} to ${esc(city(s))}`;
     sub = `Departs ${DT(s.start)} from ${esc(apName(s.from))} (${esc(s.from)}). Arrives ${arrives(s)}. Check-in opened ${when(opened, s.start)}.`;
-    body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${link(status(s), "Flight status")}</div>
+    body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${link(status(s), "Track on Flightradar24")}</div>
       <dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "airport") {
     const lead = (s.international ? 3 : 2);
@@ -427,7 +430,7 @@ function actionCard(a, t) {
     title = (dm ? `Leave home by ${timeAt(ms(s.start) - lead * H - dm * M, s.start)} for ${esc(apName(s.from))} airport` : `Head to ${esc(apName(s.from))} airport`) + (s.departure?.terminal ? `, ${esc(s.departure.terminal.split(",")[0])}` : "");
     sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}${dm ? `; the drive from ${esc(HOME.address)} is about ${dm} min` : ""}.${tg ? ` Departs from ${esc(tg)}.` : ""}${s.departure?.gate ? "" : " Gate not posted yet."}`;
     const needRide = !dm && !hasGround(t.segments, ms(s.start) - 6 * H, ms(s.start));
-    body = `${needRide ? `<div class="flag">No rental car booked: take an Uber to the airport.</div>` : ""}<div class="btns">${needRide ? link(uber(depPlace(s), apName(s.from) + " airport"), "Open Uber", true) : ""}${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", !needRide)}${ckLink(s, s.airline.checkin, "Boarding pass")}${link(status(s), "Gate & status")}</div>
+    body = `${needRide ? `<div class="flag">No rental car booked: take an Uber to the airport.</div>` : ""}<div class="btns">${needRide ? link(uber(depPlace(s), apName(s.from) + " airport"), "Open Uber", true) : ""}${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", !needRide)}${ckLink(s, s.airline.checkin, "Boarding pass")}${link(status(s), "Flightradar24")}</div>
       ${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}<dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "gohome") {
     eyebrow = "Welcome back";
@@ -438,19 +441,19 @@ function actionCard(a, t) {
     eyebrow = "In the air";
     title = `${esc(s.flightNumber)} to ${esc(city(s))}`;
     sub = `Lands ${arrives(s)}, ${rel(ms(s.end) - now())}.`;
-    body = `<div class="btns">${link(status(s), "Live flight status", true)}</div>${paxList(s.travelers)}`;
+    body = `<div class="btns">${link(status(s), "Track on Flightradar24", true)}</div>${paxList(s.travelers)}`;
   } else if (a.k === "bags") {
     eyebrow = "You've landed";
     title = `Welcome to ${esc(city(s))}. Pick up your bags`;
     sub = `${esc(s.flightNumber)} landed ${T(s.end)}${termGate(s.arrival) ? ` at ${esc(termGate(s.arrival))}` : ""}.`;
     body = `<ul class="steps"><li><b>Baggage claim</b>${esc(s.arrival?.bags || "Follow signs to baggage claim.")}</li>${(s.arrival?.ground || []).map(g => `<li>${esc(g)}</li>`).join("")}</ul>
-      <div class="btns">${link(status(s), "Carousel & status", true)}</div>`;
+      <div class="btns">${link(status(s), "Track on Flightradar24", true)}</div>`;
   } else if (a.k === "connect") {
     eyebrow = "Connection";
     title = `Make your connection to ${esc(a.conn.flightNumber)}`;
     sub = `Departs ${T(a.conn.start)} to ${esc(apName(a.conn.to))}${termGate(a.conn.departure) ? ` from ${esc(termGate(a.conn.departure))}` : ""}. You have ${rel(ms(a.conn.start) - now()).replace("in ", "")} left.`;
     body = `<ul class="steps"><li>${esc(s.arrival?.bags || "")}</li></ul>
-      <div class="btns">${ckLink(a.conn, a.conn.airline.checkin, `Check in on ${a.conn.airline.name}`, true)}${link(status(a.conn), "Gate & status")}</div>
+      <div class="btns">${ckLink(a.conn, a.conn.airline.checkin, `Check in on ${a.conn.airline.name}`, true)}${link(status(a.conn), "Flightradar24")}</div>
       <dl class="kv">${codeRow("Confirmation", a.conn.confirmation)}</dl>${paxList(a.conn.travelers)}`;
   } else if (a.k === "goto") {
     const tgt = a.targets[0], lodging = a.targets.find(x => x.type === "lodging");
@@ -703,7 +706,7 @@ function segBlock(s) {
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
       <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
-      <div class="btns">${ckLink(s, s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Status")}</div></div></div>`;
+      <div class="btns">${ckLink(s, s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
   return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
