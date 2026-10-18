@@ -429,8 +429,8 @@ function actionCard(a, t) {
     const tg = termGate(s.departure);
     title = (dm ? `Leave home by ${timeAt(ms(s.start) - lead * H - dm * M, s.start)} for ${esc(apName(s.from))} airport` : `Head to ${esc(apName(s.from))} airport`) + (s.departure?.terminal ? `, ${esc(s.departure.terminal.split(",")[0])}` : "");
     sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}${dm ? `; the drive from ${esc(HOME.address)} is about ${dm} min` : ""}.${tg ? ` Departs from ${esc(tg)}.` : ""}${s.departure?.gate ? "" : " Gate not posted yet."}`;
-    const needRide = !dm && !hasGround(t.segments, ms(s.start) - 6 * H, ms(s.start));
-    body = `${needRide ? `<div class="flag">No rental car booked: take an Uber to the airport.</div>` : ""}<div class="btns">${needRide ? link(uber(depPlace(s), apName(s.from) + " airport"), "Open Uber", true) : ""}${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", !needRide)}${ckLink(s, s.airline.checkin, "Boarding pass")}${link(status(s), "Flightradar24")}</div>
+    const gm = t.ground?.mode, needRide = !dm && gm !== "family" && !hasGround(t.segments, ms(s.start) - 6 * H, ms(s.start));
+    body = `${needRide && !gm ? `<div class="flag">No rental car booked: take an Uber to the airport.</div>` : ""}${!dm && gm === "family" && t.ground.note ? `<p class="note">• ${esc(t.ground.note)}</p>` : ""}<div class="btns">${needRide ? link(uber(depPlace(s), apName(s.from) + " airport"), "Open Uber", true) : ""}${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", !needRide)}${ckLink(s, s.airline.checkin, "Boarding pass")}${link(status(s), "Flightradar24")}</div>
       ${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}<dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "gohome") {
     eyebrow = "Welcome back";
@@ -470,9 +470,10 @@ function actionCard(a, t) {
       title = tgt.type === "transfer" ? `Meet your driver: ${esc(tgt.title)}` : `Pick up your car: ${esc(tgt.title)}`;
       sub = `${tgt.type === "transfer" ? "Pickup" : "Pickup"} ${T(tgt.start)}${lodging ? `, then on to ${esc(lodging.title)}` : ""}.`;
     }
+    const gm = t.ground?.mode, booked = a.targets.some(x => x.type === "car" || x.type === "transfer");
     body = `<ul class="steps">${(s.arrival?.ground || []).map(g => `<li>${esc(g)}</li>`).join("")}</ul>
-      ${a.targets.some(x => x.type === "car" || x.type === "transfer") ? "" : `<div class="flag">No rental car or transfer booked. An Uber is the easiest way${tgt.home ? " (unless family is picking you up)" : ""}.</div>`}
-      <div class="btns">${a.targets.some(x => x.type === "car" || x.type === "transfer") ? "" : link(uber((lodging || tgt).address, (lodging || tgt).title), "Open Uber", true)}${link(directions(arrPlace(s), (lodging || tgt).address || (lodging || tgt).title), "Directions", !!a.targets.some(x => x.type === "car" || x.type === "transfer"))}</div>
+      ${booked ? "" : gm === "family" ? (t.ground.note ? `<p class="note">• ${esc(t.ground.note)}</p>` : "") : gm === "uber" ? "" : `<div class="flag">No rental car or transfer booked. An Uber is the easiest way${tgt.home ? " (unless family is picking you up)" : ""}.</div>`}
+      <div class="btns">${booked || gm === "family" ? "" : link(uber((lodging || tgt).address, (lodging || tgt).title), "Open Uber", true)}${link(directions(arrPlace(s), (lodging || tgt).address || (lodging || tgt).title), "Directions", !!a.targets.some(x => x.type === "car" || x.type === "transfer"))}</div>
       <dl class="kv">${a.targets.map(x => codeRow(x.title, x.confirmation)).join("")}</dl>
       ${a.targets.flatMap(x => x.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}`;
   } else if (a.k === "checkout") {
@@ -678,6 +679,10 @@ function ridesFor(trip) {
         toAddr: depPlace(f), to: `${apName(f.from)} airport`, start: isoAt(st - lead - 60 * M, f.start), end: isoAt(st - lead, f.start) });
     }
   });
+  // trip.ground.mode: "uber" = Uber is the plan (no warning); "family" = family drives (no Uber)
+  const gm = trip.ground?.mode;
+  rides.forEach(r => { r.plan = gm; r.planNote = trip.ground?.note || "";
+    if (gm === "family") r.title = `Family ride to ${r.to}`; });
   return rides;
 }
 // Rides sit right next to their flight: the ride to the airport just before it, the ride from it just after.
@@ -691,9 +696,13 @@ function withRides(trip) {
   return out;
 }
 function rideBlock(r) {
+  if (r.plan === "family") return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · Family ride</span>
+    <h4>${r.dir === "in" ? "Family picks you up" : "Family drives you to the airport"}</h4>
+    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)} · around ${T(r.start)}</p>${r.planNote ? `<p class="note">• ${esc(r.planNote)}</p>` : ""}
+    <div class="btns">${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
   return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · ${logo(brandOf(r))}Uber</span>
-    <h4>No car booked: take an Uber</h4>
-    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}${r.home ? " (or a family pickup)" : ""} · around ${T(r.start)}</p>
+    <h4>${r.plan === "uber" ? esc(r.title) : "No car booked: take an Uber"}</h4>
+    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}${r.home && !r.plan ? " (or a family pickup)" : ""} · around ${T(r.start)}</p>
     <div class="btns">${link(uber(r.toAddr, r.to), "Open Uber", true)}${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
 }
 
