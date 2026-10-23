@@ -660,8 +660,9 @@ function renderNow() {
 }
 
 function previewControls() {
-  const next = tripsFor(state.person).find(t => ms(t.end) > Date.now());
-  const f = next?.segments.find(s => s.type === "flight");
+  // based on your next flight that isn't done yet (today's flight home, not the trip's first flight)
+  const f = tripsFor(state.person).flatMap(t => t.segments).filter(s => s.type === "flight" && doneAt(s) > Date.now())
+    .sort((a, b) => ms(a.start) - ms(b.start))[0];
   const chips = f ? [
     ["Live", null],
     ["Day before flight", ms(f.start) - 20 * H],
