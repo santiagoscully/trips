@@ -196,6 +196,15 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .trip-photo{aspect-ratio:3/1;height:auto;margin:-16px -18px 6px;background:var(--accent-soft) center/100% 100% no-repeat;position:relative}
 .trip-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,18,32,.25))}
 .seg{overflow:hidden}
+.seg-done{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);opacity:.75}
+.seg-done[open]{opacity:1;background:transparent;border-style:solid}
+.seg-done>summary{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;list-style:none;font-size:13px;color:var(--muted)}
+.seg-done>summary::-webkit-details-marker{display:none}
+.seg-done .done-chip{flex:none;font:700 11px/1 var(--body);padding:4px 7px;border-radius:6px;background:var(--good-soft);color:var(--good)}
+.seg-done .done-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:line-through;text-decoration-color:rgba(0,0,0,.25)}
+.seg-done .done-when{flex:none;font-size:12px}
+.seg-done .ic{transform:scale(.85)}
+.seg-done[open]>.seg{margin:0 6px 6px}
 .seg-photo{aspect-ratio:3/1;height:auto;background:var(--accent-soft) center/100% 100% no-repeat}
 img.seg-photo{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--accent-soft)}
 .card>.seg-photo{margin:-16px -18px 0;border-radius:18px 18px 0 0}
@@ -733,6 +742,12 @@ function rideBlock(r) {
     <div class="btns">${link(uber(r.toAddr, r.to), "Open Uber", true)}${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
 }
 
+// Finished items (flight landed, dinner over, hotel checked out) fold into a slim "Done" line; tap to see the full card.
+function segOrDone(s) {
+  if (!s.end || ms(s.end) > Date.now()) return segBlock(s);
+  const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
+  return `<details class="seg-done"><summary><span class="done-chip">✓ Done</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
+}
 function segBlock(s) {
   if (s.type === "ride") return rideBlock(s);
   if (s.type === "flight") {
@@ -809,7 +824,7 @@ function renderTrips(past) {
       <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
-      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segBlock).join("")}</div></details>`;
+      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segOrDone).join("")}</div></details>`;
   });
   return html;
 }
