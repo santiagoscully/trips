@@ -196,6 +196,9 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .trip-photo{aspect-ratio:3/1;height:auto;margin:-16px -18px 6px;background:var(--accent-soft) center/100% 100% no-repeat;position:relative}
 .trip-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,18,32,.25))}
 .seg{overflow:hidden}
+.flight-top{border-left:5px solid var(--brand, var(--sky))}
+.ft-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px}
+.ck-done.mini{padding:5px 8px;font-size:11px}
 .ck-done{display:inline-flex;align-items:center;font:700 13px/1 var(--body);padding:9px 12px;border-radius:999px;background:var(--good-soft);color:var(--good)}
 .seg-done{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);opacity:.75}
 .seg-done[open]{opacity:1;background:transparent;border-style:solid}
@@ -547,6 +550,22 @@ function actionCard(a, t) {
   return { eyebrow, title, sub, body };
 }
 
+// Pinned at the top of Now (Santiago: the flight info is what he needs most): the next flight that isn't done yet,
+// from before you leave until 3 h after it lands.
+function flightTopCard(f) {
+  const t0 = now(), landed = t0 >= ms(f.end), flying = t0 >= ms(f.start) && !landed;
+  const dm = driveMin(f.from), lead = f.international ? 3 : 2;
+  const ckOpen = t0 >= ms(f.start) - (f.airline.checkinHours || 24) * H && t0 < ms(f.start);
+  const leave = dm && !flying && !landed ? `<div class="flag ok">Leave ${esc(HOME.address)} by ${timeAt(ms(f.start) - lead * H - dm * M, f.start)} on ${DD(f.start)} (${dm} min drive + ${lead} h at the airport).</div>` : "";
+  return `<section class="card flight-top"${brandStyle(f)} aria-label="Your flight">
+    <div class="eyebrow">${landed ? "Just landed" : flying ? "In the air" : "Your flight"}</div>
+    <div class="ft-head">${icon(f)}${logo(brandOf(f))}<b>${esc(f.airline.name)} ${esc(f.flightNumber)}</b><span class="muted">${esc(f.from)} → ${esc(f.to)}</span>${isCheckedIn(f) ? `<span class="ck-done mini">✓ Checked in</span>` : ""}</div>
+    <dl class="kv">${row("Departs", `${DT(f.start)} · ${esc(apName(f.from))}${termGate(f.departure) ? ` · ${esc(termGate(f.departure))}` : ""}`)}${row("Arrives", `${arrives(f)}${termGate(f.arrival) ? ` · ${esc(termGate(f.arrival))}` : ""}${f.arrival?.carousel ? ` · Bags: carousel ${esc(f.arrival.carousel)}` : ""}`)}${codeRow("Confirmation", f.confirmation)}</dl>
+    ${leave}
+    <div class="btns">${link(f.airline.manage, "Manage reservation", true)}${link(status(f), "Flightradar24")}${ckOpen && !isCheckedIn(f) ? ckLink(f, f.airline.checkin, "Check in") + ckToggle(f) : ""}</div>
+  </section>`;
+}
+
 function flightNowCard(f) {
   const dm = driveMin(f.from), lead = f.international ? 3 : 2;
   const fromHome = dm ? `<div class="flag ok">Leave ${esc(HOME.address)} by ${timeAt(ms(f.start) - lead * H - dm * M, f.start)} on ${DD(f.start)}: about ${dm} min to ${esc(apName(f.from))} and ${lead} h at the airport.</div>
@@ -609,19 +628,22 @@ function renderNow() {
       head = `<section class="hero">${tripPhoto(trip, "hero-photo")}<div class="hero-head calm"><div class="eyebrow">${esc(trip.title)}</div>
         <h2>${n ? `Coming up ${rel(n.from - t0)}` : "Trip wrapping up"}</h2><p class="sub">${n ? `${c.title.replace(/<[^>]+>/g, "")} · ${when(n.from, n.s.start)}` : "Nothing else scheduled."}</p></div></section>`;
     }
+    const topFlight = trip.segments.filter(s => s.type === "flight" && doneAt(s) > t0 && ms(s.start) - 2 * D <= t0).sort((a, b) => ms(a.start) - ms(b.start))[0];
+    if (topFlight) html += flightTopCard(topFlight);
     html += head;
     // Prefer the lodging booked for the selected person (e.g. a companion's own room).
     const lodgings = trip.segments.filter(s => s.type === "lodging");
     const mine = lodgings.filter(s => (s.travelers || []).includes(state.person));
     const pool = mine.length ? mine : lodgings;
-    const stayNow = pool.find(s => ms(s.start) - 8 * H <= t0 && t0 < ms(s.end));
+    const stayNow = pool.find(s => ms(s.start) - 8 * H <= t0 && t0 < doneAt(s));  // stays shown until 2 h after checkout
     const stayNext = pool.find(s => ms(s.start) > t0);
     const st = stayNow || stayNext;
     // Until you've landed, the next flight matters more than the hotel at the other end.
     const nextFlight = trip.segments.find(s => s.type === "flight" && ms(s.end) > t0);
     const flyFirst = nextFlight && (!st || ms(nextFlight.end) <= ms(st.start) + 24 * H);
-    if (flyFirst) html += flightNowCard(nextFlight);
-    else if (st) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
+    // The pinned flight card above already covers the flight; the stay card stays until 2 h after checkout.
+    if (st && !(flyFirst && !stayNow)) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
+    else if (flyFirst && !topFlight) html += flightNowCard(nextFlight);
     const nextSegs = withRides(trip).filter(s => ms(s.start) > t0).slice(0, 5);
     if (nextSegs.length) html += `<section class="card"><div class="eyebrow">Next in this trip</div><ul class="next">
       ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.type === "ride" ? s.title : segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${quickBtn(s) ? `<br>${quickBtn(s)}` : ""}${s.type === "ride" ? `<br><a class="btn mini" ${hrefAttrs(uber(s.toAddr, s.to))}>Open Uber ↗</a>` : ""}</span></li>`).join("")}</ul></section>`;
