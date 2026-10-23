@@ -755,10 +755,11 @@ function rideBlock(r) {
 // Finished items (flight landed, dinner over, hotel checked out) fold into a slim "Done" line; tap to see the full card.
 // When an item counts as done (Santiago's rules): flights 3 h after scheduled arrival (room for delays),
 // transfers/rides 1 h after, dinners/events/shows 4 h after they START (multi-day activities when they end),
-// hotels and cars when they end.
+// hotel stays 2 h after checkout, cars when they end.
 const doneAt = s => {
   if (s.type === "flight") return ms(s.end) + 3 * H;
   if (s.type === "transfer" || s.type === "ride") return ms(s.end) + H;
+  if (s.type === "lodging") return ms(s.end) + 2 * H;   // hotel stays fold 2 h after checkout
   if (s.type === "activity" && ms(s.end) - ms(s.start) <= 12 * H) return ms(s.start) + 4 * H;
   return ms(s.end);
 };
