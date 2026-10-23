@@ -378,6 +378,9 @@ const codeRow = (label, v) => v ? `<dt>${esc(label)}</dt><dd><span class="code">
 const row = (label, v) => v ? `<dt>${esc(label)}</dt><dd>${v}</dd>` : "";
 // The one link that takes you straight to checking in for a flight or hotel
 const checkinLink = s => s.type === "flight" ? s.airline?.checkin : s.onlineCheckin?.url;
+// Hotel check-in stays offered until midnight (hotel's local time) at the end of the check-in day, in case you arrive late.
+const ckUntil = s => s.type === "flight" ? ms(s.start) : Date.parse(`${s.start.slice(0, 10)}T23:59:59${s.start.slice(19)}`);
+const hotelCk = s => s.onlineCheckin && !isCheckedIn(s) && Date.now() < ckUntil(s);
 // Check-in buttons carry data-ck=<segment>; after each render only the first (top) one per segment stays.
 const ckKey = s => `${s.id}|${s.start}`;
 const ckTag = (s, html) => html.replace("<a ", `<a data-ck="${esc(ckKey(s))}" `);
@@ -436,7 +439,7 @@ function actionsFor(trip) {
       }
     } else if (s.type === "lodging") {
       acts.push({ k: "stay", from: st, to: en, s, p: 1 });
-      if (s.onlineCheckin) acts.push({ k: "hotelcheckin", from: st - (s.onlineCheckin.opensHours || 24) * H, to: st + 6 * H, s, p: 4 });
+      if (s.onlineCheckin && !isCheckedIn(s)) acts.push({ k: "hotelcheckin", from: st - (s.onlineCheckin.opensHours || 24) * H, to: ckUntil(s), s, p: 4 });
       if (!s.home) acts.push({ k: "checkout", from: en - 4 * H, to: en, s, p: 4 });
     } else if (s.type === "car" || s.type === "transfer") {
       acts.push({ k: "pickup", from: st - 90 * M, to: st + 60 * M, s, p: 6 });
@@ -561,7 +564,7 @@ function lodgingCard(s, label) {
       ${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>${copyBtn(s.phone)}` : "")}
     </dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}
-    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${s.onlineCheckin ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !s.onlineCheckin)}${link(s.link, "Manage booking")}</div>
+    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !hotelCk(s))}${link(s.link, "Manage booking")}</div>
   </section>`;
 }
 
@@ -780,7 +783,7 @@ function segBlock(s) {
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
-    <div class="btns">${s.onlineCheckin ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
 }
 
 // "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
@@ -793,7 +796,7 @@ function tripEnds(t) {
 }
 
 function quickRow(t) {
-  const items = t.segments.filter(x => checkinLink(x) && !isCheckedIn(x) && (x.type === "flight" ? ms(x.end) > Date.now() : ms(x.start) > Date.now()));
+  const items = t.segments.filter(x => checkinLink(x) && !isCheckedIn(x) && Date.now() < ckUntil(x));
   if (!items.length) return "";
   const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
   return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
@@ -803,7 +806,7 @@ function quickRow(t) {
 function renderCheckin() {
   const t0 = Date.now();
   const items = tripsFor(state.person).flatMap(t => t.segments.map(x => ({ t, x })))
-    .filter(({ x }) => checkinLink(x) && ms(x.start) > t0 - 6 * H)
+    .filter(({ x }) => checkinLink(x) && (x.type === "flight" ? ms(x.start) > t0 - 6 * H : t0 < ckUntil(x)))
     .sort((a, b) => ms(a.x.start) - ms(b.x.start)).slice(0, 6);
   if (!items.length) return `<div class="empty">Nothing to check in for right now.</div>`;
   return `<section class="card"><div class="eyebrow">Check in</div>${items.map(({ t, x }) => {
