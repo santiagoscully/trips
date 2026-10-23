@@ -463,7 +463,7 @@ function actionCard(a, t) {
     title = `Check in for ${esc(s.flightNumber)} to ${esc(city(s))}`;
     sub = `Departs ${DT(s.start)} from ${esc(apName(s.from))} (${esc(s.from)}). Arrives ${arrives(s)}. Check-in opened ${when(opened, s.start)}.`;
     body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${ckToggle(s)}${link(status(s), "Track on Flightradar24")}</div>
-      <dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
+      <dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "airport") {
     const lead = (s.international ? 3 : 2);
     eyebrow = "Time to go";
@@ -552,6 +552,13 @@ function actionCard(a, t) {
 
 // Pinned at the top of Now (Santiago: the flight info is what he needs most): the next flight that isn't done yet,
 // from before you leave until 3 h after it lands.
+// "Santiago 22A, Daniela 20F" with the selected person first; "Not assigned yet" when no seats are known
+const seatList = f => {
+  const pax = (f.travelers || []).map(t => typeof t === "string" ? { name: t } : t)
+    .sort((a, b) => (b.name === state.person) - (a.name === state.person));
+  if (!pax.some(p => p.seat)) return pax.length ? "Not assigned yet" : "";
+  return pax.map(p => `${p.name === state.person ? "<b>" : ""}${esc(first(p.name))} ${esc(p.seat || "–")}${p.name === state.person ? "</b>" : ""}`).join(", ");
+};
 function flightTopCard(f) {
   const t0 = now(), landed = t0 >= ms(f.end), flying = t0 >= ms(f.start) && !landed;
   const dm = driveMin(f.from), lead = f.international ? 3 : 2;
@@ -560,7 +567,7 @@ function flightTopCard(f) {
   return `<section class="card flight-top"${brandStyle(f)} aria-label="Your flight">
     <div class="eyebrow">${landed ? "Just landed" : flying ? "In the air" : "Your flight"}</div>
     <div class="ft-head">${icon(f)}${logo(brandOf(f))}<b>${esc(f.airline.name)} ${esc(f.flightNumber)}</b><span class="muted">${esc(f.from)} → ${esc(f.to)}</span>${isCheckedIn(f) ? `<span class="ck-done mini">✓ Checked in</span>` : ""}</div>
-    <dl class="kv">${row("Departs", `${DT(f.start)} · ${esc(apName(f.from))}${termGate(f.departure) ? ` · ${esc(termGate(f.departure))}` : ""}`)}${row("Arrives", `${arrives(f)}${termGate(f.arrival) ? ` · ${esc(termGate(f.arrival))}` : ""}${f.arrival?.carousel ? ` · Bags: carousel ${esc(f.arrival.carousel)}` : ""}`)}${codeRow("Confirmation", f.confirmation)}</dl>
+    <dl class="kv">${row("Departs", `${DT(f.start)} · ${esc(apName(f.from))}${termGate(f.departure) ? ` · ${esc(termGate(f.departure))}` : ""}`)}${row("Arrives", `${arrives(f)}${termGate(f.arrival) ? ` · ${esc(termGate(f.arrival))}` : ""}`)}${row(seatList(f).includes(",") ? "Seats" : "Seat", seatList(f))}${row("Bags", f.baggage ? esc(f.baggage) : "")}${(flying || landed) ? row("Baggage claim", `${f.arrival?.carousel ? `<b>Carousel ${esc(f.arrival.carousel)}</b> · ` : ""}${esc(f.arrival?.bags || "")}`) : ""}${codeRow("Confirmation", f.confirmation)}</dl>
     ${leave}
     <div class="btns">${link(f.airline.manage, "Manage reservation", true)}${link(status(f), "Flightradar24")}${ckOpen && !isCheckedIn(f) ? ckLink(f, f.airline.checkin, "Check in") + ckToggle(f) : ""}</div>
   </section>`;
@@ -798,7 +805,7 @@ function segBlock(s) {
       <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
-      <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
+      <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
       <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
