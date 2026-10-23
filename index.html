@@ -552,12 +552,12 @@ function actionCard(a, t) {
 
 // Pinned at the top of Now (Santiago: the flight info is what he needs most): the next flight that isn't done yet,
 // from before you leave until 3 h after it lands.
-// "Santiago 22A, Daniela 20F" with the selected person first; "Not assigned yet" when no seats are known
+// "20G, 20F, 20E" with the selected person's seat first; "Not assigned yet" when no seats are known
 const seatList = f => {
   const pax = (f.travelers || []).map(t => typeof t === "string" ? { name: t } : t)
     .sort((a, b) => (b.name === state.person) - (a.name === state.person));
   if (!pax.some(p => p.seat)) return pax.length ? "Not assigned yet" : "";
-  return pax.map(p => `${p.name === state.person ? "<b>" : ""}${esc(first(p.name))} ${esc(p.seat || "–")}${p.name === state.person ? "</b>" : ""}`).join(", ");
+  return pax.filter(p => p.seat).map(p => p.name === state.person ? `<b>${esc(p.seat)}</b>` : esc(p.seat)).join(", ");  // seat numbers only; yours first, in bold
 };
 function flightTopCard(f) {
   const t0 = now(), landed = t0 >= ms(f.end), flying = t0 >= ms(f.start) && !landed;
