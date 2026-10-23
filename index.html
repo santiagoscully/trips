@@ -743,8 +743,10 @@ function rideBlock(r) {
 }
 
 // Finished items (flight landed, dinner over, hotel checked out) fold into a slim "Done" line; tap to see the full card.
+// Flights stay open 3 h past the scheduled arrival (delays, bags, ground transport); other items fold when they end.
+const DONE_AFTER = { flight: 3 * H, transfer: H, ride: H };
 function segOrDone(s) {
-  if (!s.end || ms(s.end) > Date.now()) return segBlock(s);
+  if (!s.end || ms(s.end) + (DONE_AFTER[s.type] || 0) > Date.now()) return segBlock(s);
   const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
   return `<details class="seg-done"><summary><span class="done-chip">✓ Done</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
 }
