@@ -196,6 +196,7 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .trip-photo{aspect-ratio:3/1;height:auto;margin:-16px -18px 6px;background:var(--accent-soft) center/100% 100% no-repeat;position:relative}
 .trip-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,18,32,.25))}
 .seg{overflow:hidden}
+.ck-done{display:inline-flex;align-items:center;font:700 13px/1 var(--body);padding:9px 12px;border-radius:999px;background:var(--good-soft);color:var(--good)}
 .seg-done{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);opacity:.75}
 .seg-done[open]{opacity:1;background:transparent;border-style:solid}
 .seg-done>summary{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;list-style:none;font-size:13px;color:var(--muted)}
@@ -381,6 +382,12 @@ const checkinLink = s => s.type === "flight" ? s.airline?.checkin : s.onlineChec
 const ckKey = s => `${s.id}|${s.start}`;
 const ckTag = (s, html) => html.replace("<a ", `<a data-ck="${esc(ckKey(s))}" `);
 const ckLink = (s, href, label, primary) => ckTag(s, link(href, label, primary));
+// Checked in: set in the data (`checkedIn: true`, shared with everyone) or tapped on this device (kept in this browser).
+const ckLocal = () => { try { return JSON.parse(localStorage.getItem("tb-checkedin") || "[]"); } catch (_) { return []; } };
+const isCheckedIn = s => s.checkedIn === true || ckLocal().includes(ckKey(s));
+const ckToggle = s => s.checkedIn === true ? `<span class="ck-done">✓ Checked in</span>`
+  : isCheckedIn(s) ? `<span class="ck-done">✓ Checked in</span><button class="copy" data-ck-undo="${esc(ckKey(s))}">Undo</button>`
+  : `<button class="btn" data-ck-mark="${esc(ckKey(s))}">I've checked in ✓</button>`;
 const quickBtn = s => { const u = checkinLink(s); return u ? ckTag(s, `<a class="btn mini" ${hrefAttrs(u)}>Check in ↗</a>`) : ""; };
 const maps = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 const directions = (o, d) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`;
@@ -412,7 +419,7 @@ function actionsFor(trip) {
     if (s.type === "flight") {
       const lead = (s.international ? 3 : 2) * H;
       const ck = st - (s.airline.checkinHours || 24) * H;
-      acts.push({ k: "checkin", from: ck, to: st - lead - (driveMin(s.from) || 0) * M - 30 * M, s, p: 5 });
+      if (!isCheckedIn(s)) acts.push({ k: "checkin", from: ck, to: st - lead - (driveMin(s.from) || 0) * M - 30 * M, s, p: 5 });
       const drive = (driveMin(s.from) || 0) * M;
       acts.push({ k: "airport", from: st - lead - drive - 30 * M, to: st, s, p: 6 });
       acts.push({ k: "inair", from: st, to: en, s, p: 9 });
@@ -449,7 +456,7 @@ function actionCard(a, t) {
     eyebrow = "Check-in is open";
     title = `Check in for ${esc(s.flightNumber)} to ${esc(city(s))}`;
     sub = `Departs ${DT(s.start)} from ${esc(apName(s.from))} (${esc(s.from)}). Arrives ${arrives(s)}. Check-in opened ${when(opened, s.start)}.`;
-    body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${link(status(s), "Track on Flightradar24")}</div>
+    body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${ckToggle(s)}${link(status(s), "Track on Flightradar24")}</div>
       <dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "airport") {
     const lead = (s.international ? 3 : 2);
@@ -766,7 +773,7 @@ function segBlock(s) {
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
       <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
-      <div class="btns">${ckLink(s, s.airline.checkin, "Check in", true)}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
+      <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
   return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
@@ -786,7 +793,7 @@ function tripEnds(t) {
 }
 
 function quickRow(t) {
-  const items = t.segments.filter(x => checkinLink(x) && ms(x.end) > Date.now());
+  const items = t.segments.filter(x => checkinLink(x) && !isCheckedIn(x) && (x.type === "flight" ? ms(x.end) > Date.now() : ms(x.start) > Date.now()));
   if (!items.length) return "";
   const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
   return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
@@ -802,9 +809,9 @@ function renderCheckin() {
   return `<section class="card"><div class="eyebrow">Check in</div>${items.map(({ t, x }) => {
     const label = x.type === "flight" ? `${x.airline.name} ${x.flightNumber.split(" ")[0]} · ${x.from} → ${x.to}` : x.title;
     const opens = x.type === "flight" ? ms(x.start) - (x.airline.checkinHours || 24) * H : ms(x.start) - (x.onlineCheckin.opensHours || 24) * H;
-    const status = opens <= t0 ? "Check-in is open" : `Opens ${when(opens, x.start)}`;
+    const status = isCheckedIn(x) ? "✓ Checked in" : opens <= t0 ? "Check-in is open" : `Opens ${when(opens, x.start)}`;
     return `<div class="ckrow"${brandStyle(x)}><div><b>${icon(x)}${logo(brandOf(x))}${esc(label)}</b><div class="muted">${DT(x.start)} · ${esc(t.title)}</div><div class="note">${status}${x.confirmation ? ` · <span class="code">${esc(x.confirmation)}</span>` : ""}</div></div>
-      ${link(checkinLink(x), "Check in", opens <= t0)}</div>`;
+      ${isCheckedIn(x) ? "" : link(checkinLink(x), "Check in", opens <= t0)}</div>`;
   }).join("")}</section>`;
 }
 
@@ -936,6 +943,13 @@ function tick() {
 }
 
 document.addEventListener("click", e => {
+  const mk = e.target.closest("[data-ck-mark],[data-ck-undo]");
+  if (mk) {
+    const key = mk.dataset.ckMark || mk.dataset.ckUndo, list = ckLocal().filter(k => k !== key);
+    if (mk.dataset.ckMark) list.push(key);
+    try { localStorage.setItem("tb-checkedin", JSON.stringify(list)); } catch (_) {}
+    render(); return;
+  }
   const tab = e.target.closest(".tab, .footlink");
   if (tab) { state.view = tab.dataset.view; try { localStorage.setItem("tb-view", state.view); } catch (_) {} render(); window.scrollTo(0, 0); return; }
   const cp = e.target.closest(".copy");
