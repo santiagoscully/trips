@@ -267,7 +267,7 @@ footer .about summary{color:var(--muted)}
   <main id="app"><div class="empty">Loading trips…</div></main>
   <footer id="foot"><nav class="footlinks" aria-label="More">
     <button class="footlink" data-view="past">Past trips</button>
-    <button class="footlink" data-view="changes">Change history</button></nav>
+    <button class="footlink" data-view="changes" id="changes-link">Change history</button></nav>
     <details class="about"><summary>About</summary>
     <p>Details come from booking emails. Flights and email are checked weekly, and every day from 2 days before a trip until it ends. <span id="about-checked"></span></p>
     <p id="photo-credits"></p>
@@ -281,6 +281,8 @@ const AIRPORTS = {SJC:"San José",DEN:"Denver",SFO:"San Francisco",HNL:"Honolulu
 let MAIN = "";
 let HOME = null; // {address, airports: {SJC: minutes, ...}}
 const driveMin = code => HOME?.airports?.[code];
+// View-only copy (site/view/, built by publish.py): no codes, prices or manage/check-in actions.
+const VIEW_ONLY = false;
 const state = { trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
 
 try { const v = localStorage.getItem("tb-view"); if (v) state.view = v; } catch (e) {}
@@ -392,7 +394,7 @@ const ckLink = (s, href, label, primary) => ckTag(s, link(href, label, primary))
 // Checked in: set in the data (`checkedIn: true`, shared with everyone) or tapped on this device (kept in this browser).
 const ckLocal = () => { try { return JSON.parse(localStorage.getItem("tb-checkedin") || "[]"); } catch (_) { return []; } };
 const isCheckedIn = s => s.checkedIn === true || ckLocal().includes(ckKey(s));
-const ckToggle = s => s.checkedIn === true ? `<span class="ck-done">✓ Checked in</span>`
+const ckToggle = s => VIEW_ONLY ? "" : s.checkedIn === true ? `<span class="ck-done">✓ Checked in</span>`
   : isCheckedIn(s) ? `<span class="ck-done">✓ Checked in</span><button class="copy" data-ck-undo="${esc(ckKey(s))}">Undo</button>`
   : `<button class="btn" data-ck-mark="${esc(ckKey(s))}">I've checked in ✓</button>`;
 const quickBtn = s => { const u = checkinLink(s); return u ? ckTag(s, `<a class="btn mini" ${hrefAttrs(u)}>Check in ↗</a>`) : ""; };
@@ -426,7 +428,7 @@ function actionsFor(trip) {
     if (s.type === "flight") {
       const lead = (s.international ? 3 : 2) * H;
       const ck = st - (s.airline.checkinHours || 24) * H;
-      if (!isCheckedIn(s)) acts.push({ k: "checkin", from: ck, to: st - lead - (driveMin(s.from) || 0) * M - 30 * M, s, p: 5 });
+      if (!VIEW_ONLY && !isCheckedIn(s)) acts.push({ k: "checkin", from: ck, to: st - lead - (driveMin(s.from) || 0) * M - 30 * M, s, p: 5 });
       const drive = (driveMin(s.from) || 0) * M;
       acts.push({ k: "airport", from: st - lead - drive - 30 * M, to: st, s, p: 6 });
       acts.push({ k: "inair", from: st, to: en, s, p: 9 });
@@ -953,6 +955,7 @@ function renderCredits() {
 }
 
 function render() {
+  if (VIEW_ONLY) document.getElementById("changes-link")?.remove();
   renderCredits();
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === state.view)));
   document.querySelectorAll(".footlink").forEach(b => b.dataset.view === state.view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
