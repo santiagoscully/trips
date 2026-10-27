@@ -200,6 +200,7 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .ft-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px}
 .ck-done.mini{padding:5px 8px;font-size:11px}
 .ck-done{display:inline-flex;align-items:center;font:700 13px/1 var(--body);padding:9px 12px;border-radius:999px;background:var(--good-soft);color:var(--good)}
+.note.cancel{background:var(--surface-2);border-radius:10px;padding:8px 10px;margin:6px 0}
 .seg-done{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);opacity:.75}
 .seg-done[open]{opacity:1;background:transparent;border-style:solid}
 .seg-done>summary{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;list-style:none;font-size:13px;color:var(--muted)}
@@ -798,6 +799,17 @@ function segOrDone(s) {
   const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
   return `<details class="seg-done"><summary><span class="done-chip">✓ Done</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
 }
+// Cancellation terms on a reservation: {deadline: ISO or null, fee, terms}. Warns when the free-cancel deadline is close.
+function cancelInfo(s) {
+  const c = s.cancellation; if (!c) return "";
+  const t0 = Date.now(), dl = c.deadline ? ms(c.deadline) : null;
+  let line;
+  if (dl && dl > t0) line = `Free to cancel until <b>${DT(c.deadline)}</b>; after that ${esc(c.fee)}`;
+  else if (dl) line = `Cancelling now costs <b>${esc(c.fee)}</b> (free cancellation ended ${DT(c.deadline)})`;
+  else line = `<b>${esc(c.fee)}</b>`;
+  const soon = dl && dl > t0 && dl - t0 < 2 * D;
+  return `<div class="${soon ? "flag" : "note cancel"}">${soon ? `Cancel by ${DT(c.deadline)} to avoid ${esc(c.fee)}.` : `Cancellation: ${line}.`}${c.terms ? `<br><span class="muted">${esc(c.terms)}</span>` : ""}</div>`;
+}
 function segBlock(s) {
   if (s.type === "ride") return rideBlock(s);
   if (s.type === "flight") {
@@ -813,7 +825,7 @@ function segBlock(s) {
   return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
-    ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
+    ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
     <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
 }
 
