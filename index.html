@@ -208,6 +208,7 @@ header.top .clock,.who{color:var(--on-sky-muted)}
   border-bottom:4px solid;border-image:linear-gradient(90deg,#4285F4 0 25%,#EA4335 25% 50%,#FBBC05 50% 75%,#34A853 75%) 1;pointer-events:none}
 .work-bar span{color:#9AA0A6}.work-bar .org{color:#202124}
 .work-bar img{width:18px;height:18px}
+.chip.tentative{background:#FFF4E0;color:#B26A00;font-weight:700;border:1px dashed #E0A040}
 .chip.work-chip{background:#E8F0FE;color:#1A73E8;font-weight:700}
 .seg-done{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);opacity:.75}
 .seg-done[open]{opacity:1;background:transparent;border-style:solid}
@@ -897,7 +898,7 @@ function renderTrips(past) {
       ${workRibbon(t)}${tripPhoto(t)}
       <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
-      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
+      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentative</span>` : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
       </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segOrDone).join("")}</div></details>`;
