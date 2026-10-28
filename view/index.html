@@ -202,6 +202,12 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .ck-done.mini{padding:5px 8px;font-size:11px}
 .ck-done{display:inline-flex;align-items:center;font:700 13px/1 var(--body);padding:9px 12px;border-radius:999px;background:var(--good-soft);color:var(--good)}
 .note.cancel{background:var(--surface-2);border-radius:10px;padding:8px 10px;margin:6px 0}
+.trip.work,.hero.work{position:relative}
+.work-ribbon{position:absolute;top:0;right:0;width:120px;height:120px;overflow:hidden;pointer-events:none;z-index:2}
+.work-ribbon span{position:absolute;top:24px;right:-34px;width:160px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;gap:5px;
+  background:#fff;color:#1A73E8;font:800 12px/1 var(--body);letter-spacing:.12em;padding:7px 0;box-shadow:0 2px 6px rgba(0,0,0,.25);border-top:3px solid #4285F4;border-bottom:3px solid #34A853}
+.work-ribbon img{width:14px;height:14px}
+.chip.work-chip{background:#E8F0FE;color:#1A73E8;font-weight:700}
 .seg-done{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);opacity:.75}
 .seg-done[open]{opacity:1;background:transparent;border-style:solid}
 .seg-done>summary{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;list-style:none;font-size:13px;color:var(--muted)}
@@ -626,7 +632,7 @@ function renderNow() {
     let head;
     if (primary) {
       const c = actionCard(primary, trip);
-      head = `<section class="hero">${tripPhoto(trip, "hero-photo")}<div class="hero-head${primary.k === "stay" ? " calm" : ""}"><div class="eyebrow">${esc(trip.title)} · ${c.eyebrow}</div><h2>${c.title}</h2><p class="sub">${c.sub}</p></div>
+      head = `<section class="hero${trip.work ? " work" : ""}">${workRibbon(trip)}${tripPhoto(trip, "hero-photo")}<div class="hero-head${primary.k === "stay" ? " calm" : ""}"><div class="eyebrow">${esc(trip.title)} · ${c.eyebrow}</div><h2>${c.title}</h2><p class="sub">${c.sub}</p></div>
         ${c.body ? `<div class="hero-body">${c.body}</div>` : ""}</section>`;
       const others = live.slice(1).filter(a => a.k !== "stay" && !(a.k === "checkout" && primary.k === "stay"));
       for (const o of others) {
@@ -636,7 +642,7 @@ function renderNow() {
     } else {
       const n = upcoming[0];
       const c = n ? actionCard(n, trip) : null;
-      head = `<section class="hero">${tripPhoto(trip, "hero-photo")}<div class="hero-head calm"><div class="eyebrow">${esc(trip.title)}</div>
+      head = `<section class="hero${trip.work ? " work" : ""}">${workRibbon(trip)}${tripPhoto(trip, "hero-photo")}<div class="hero-head calm"><div class="eyebrow">${esc(trip.title)}</div>
         <h2>${n ? `Coming up ${rel(n.from - t0)}` : "Trip wrapping up"}</h2><p class="sub">${n ? `${c.title.replace(/<[^>]+>/g, "")} · ${when(n.from, n.s.start)}` : "Nothing else scheduled."}</p></div></section>`;
     }
     const topFlight = trip.segments.filter(s => s.type === "flight" && doneAt(s) > t0 && ms(s.start) - 2 * D <= t0).sort((a, b) => ms(a.start) - ms(b.start))[0];
@@ -872,6 +878,8 @@ const tripPhoto = (t, cls = "trip-photo") => t.photo ? `<div class="${cls}" styl
 // each trip card gets its own colour band
 const TRIP_COLORS = ["#2E5BEA", "#E0571B", "#0B8F7D", "#8B5CF6", "#D9A100", "#D63864"];
 
+// Work trips (trip.work = {org: "Google"}): a diagonal ribbon across the card's top-right corner with the company logo.
+const workRibbon = t => t.work ? `<div class="work-ribbon" aria-label="Work trip for ${esc(t.work.org)}"><span>${t.work.logo ? `<img src="../logos/${esc(t.work.logo)}.png" alt="" width="14" height="14">` : ""}WORK</span></div>` : "";
 function renderTrips(past) {
   const t0 = Date.now();
   const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
@@ -882,11 +890,11 @@ function renderTrips(past) {
     const p = parts(ms(t.start), offMin(t.start)), mk = `${MO[p.mo]} ${p.y}`;
     if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     const soon = !past && ms(t.start) - t0 < 7 * D;
-    html += `<details class="trip" style="--tc:${TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
-      ${tripPhoto(t)}
+    html += `<details class="trip${t.work ? " work" : ""}" style="--tc:${t.work ? "#4285F4" : TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
+      ${workRibbon(t)}${tripPhoto(t)}
       <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
-      <div class="chips">${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
+      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
       </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segOrDone).join("")}</div></details>`;
