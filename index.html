@@ -302,6 +302,8 @@ const VIEW_ONLY = false;
 const FAMILY_TAB = false;
 // Alicia's copy: a self check-in helper (button + code + last name) on flights where she travels alone.
 const CHECKIN_HELP = false;
+// Alicia's copy: no Now tab; "Trips" (upcoming, tap to expand) is the home view. Past trips stay at the bottom.
+const NO_NOW = false;
 const state = { trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
 
 try { const v = localStorage.getItem("tb-view"); if (v) state.view = v; } catch (e) {}
@@ -1056,6 +1058,11 @@ function renderCredits() {
 
 function render() {
   if (VIEW_ONLY) document.getElementById("changes-link")?.remove();
+  if (NO_NOW) {
+    document.getElementById("tab-now")?.remove();
+    const tt = document.getElementById("tab-trips"); if (tt) tt.textContent = "Trips";
+    if (state.view === "now" || state.view === "checkin") state.view = "trips";
+  }
   const ft = document.getElementById("tab-family");
   if (ft) { ft.hidden = !FAMILY_TAB; ft.textContent = state.familyLabel || ft.textContent; }
   const lt = document.getElementById("tab-local");
