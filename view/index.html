@@ -340,6 +340,7 @@ const timeAt = (t, ref) => tStr(parts(t, offMin(ref)));
 const dateAt = (t, ref) => dStr(parts(t, offMin(ref)));
 const when = (t, ref) => `${dateAt(t, ref)}, ${timeAt(t, ref)}`;
 const T = iso => timeAt(ms(iso), iso), DT = iso => when(ms(iso), iso), DD = iso => dateAt(ms(iso), iso);
+const sDate = iso => { const p = parts(ms(iso), offMin(iso)); return `${MO[p.mo]} ${p.d}`; };   // "Nov 18"
 function rangeStr(a, b) {
   const pa = parts(ms(a), offMin(a)), pb = parts(ms(b), offMin(b));
   if (pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d) return `${MO[pa.mo]} ${pa.d}, ${pa.y}`;
@@ -648,7 +649,8 @@ function ckHelper(f) {
   return `<div class="ckhelp"><div class="eyebrow">Check in yourself</div><p class="note">${status}</p>
     <dl class="kv">${codeRow("Reservation code", code)}${p.lastName ? codeRow("Last name", p.lastName) : ""}${p.firstName ? row("First name", esc(p.firstName)) : ""}</dl>
     <p class="note">Tap <b>Check in</b>, enter the reservation code and last name exactly as shown, then follow the steps to get your boarding pass.</p>
-    <div class="btns">${link(url, `Check in on ${f.airline.name}`, t0 >= opens)}</div></div>`;
+    ${p.docNote ? `<p class="note">🛂 ${esc(p.docNote)}</p>` : ""}
+    <div class="btns">${link(url, `Check in on ${f.airline.name}`, t0 >= opens)}${p.docLink ? link(p.docLink, "Passport (Drive)") : ""}</div></div>`;
 }
 function flightTopCard(f) {
   const t0 = now(), landed = t0 >= ms(f.end), flying = t0 >= ms(f.start) && !landed;
@@ -932,7 +934,7 @@ function tripEnds(t) {
 function quickRow(t) {
   const items = t.segments.filter(x => checkinLink(x) && !isCheckedIn(x) && Date.now() < ckUntil(x));
   if (!items.length) return "";
-  const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
+  const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${sDate(x.start)}` : `Hotel · ${sDate(x.start)}`;
   return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
 }
 

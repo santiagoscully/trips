@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta name="robots" content="noindex">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Alicia's trips</title>
+<title>Viajes de Alicia</title>
 <meta name="theme-color" content="#7B2D4A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -269,10 +269,10 @@ footer .about summary{color:var(--muted)}
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1>Trip Board</h1>
+      <h1>Viajes de Alicia</h1>
       <span class="clock" id="clock"></span>
     </div>
-    <div class="who"><label for="person">Showing trips for</label><select id="person"></select></div>
+    <div class="who"><label for="person">Viendo los viajes de</label><select id="person"></select></div>
     <nav class="tabs" role="tablist" aria-label="Views">
       <button class="tab" role="tab" id="tab-now" data-view="now" aria-selected="true">Now</button>
       <button class="tab" role="tab" id="tab-trips" data-view="trips" aria-selected="false">Upcoming</button>
@@ -280,14 +280,14 @@ footer .about summary{color:var(--muted)}
       <button class="tab" role="tab" id="tab-family" data-view="family" aria-selected="false" hidden>Dani's trips</button>
     </nav>
   </header>
-  <main id="app"><div class="empty">Loading trips…</div></main>
+  <main id="app"><div class="empty">Cargando viajes…</div></main>
   <footer id="foot"><nav class="footlinks" aria-label="More">
-    <button class="footlink" data-view="past">Past trips</button>
+    <button class="footlink" data-view="past">Viajes pasados</button>
     <button class="footlink" data-view="changes" id="changes-link">Change history</button></nav>
-    <details class="about"><summary>About</summary>
-    <p>Details come from booking emails. Flights and email are checked weekly, and every day from 2 days before a trip until it ends. <span id="about-checked"></span></p>
+    <details class="about"><summary>Acerca de</summary>
+    <p>Los datos salen de los mails de las reservas. Los vuelos y los mails se revisan cada semana, y todos los días desde 2 días antes de cada viaje hasta que termina. <span id="about-checked"></span></p>
     <p id="photo-credits"></p>
-    <button class="copy" id="lock" hidden>Forget passphrase on this device</button></details></footer>
+    <button class="copy" id="lock" hidden>Olvidar la contraseña en este dispositivo</button></details></footer>
 </div>
 
 <script>
@@ -332,25 +332,26 @@ const h = (location.hash || "").slice(1); if (["now","trips","past","checkin"].i
 const ms = iso => Date.parse(iso);
 const offMin = iso => { const m = /([+-])(\d\d):(\d\d)$/.exec(iso); return m ? (m[1] === "-" ? -1 : 1) * (+m[2] * 60 + +m[3]) : 0; };
 function parts(t, off) { const d = new Date(t + off * M); return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), wd: d.getUTCDay(), hh: d.getUTCHours(), mi: d.getUTCMinutes() }; }
-const WD = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const tStr = p => `${(p.hh % 12) || 12}:${String(p.mi).padStart(2, "0")} ${p.hh < 12 ? "AM" : "PM"}`;
-const dStr = p => `${WD[p.wd]}, ${MO[p.mo]} ${p.d}`;
+const WD = ["dom","lun","mar","mié","jue","vie","sáb"], MO = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const tStr = p => `${String(p.hh).padStart(2, "0")}:${String(p.mi).padStart(2, "0")}`;
+const dStr = p => `${WD[p.wd]} ${p.d} ${MO[p.mo]}`;
 // format an instant in the time zone of a reference ISO string
 const timeAt = (t, ref) => tStr(parts(t, offMin(ref)));
 const dateAt = (t, ref) => dStr(parts(t, offMin(ref)));
 const when = (t, ref) => `${dateAt(t, ref)}, ${timeAt(t, ref)}`;
 const T = iso => timeAt(ms(iso), iso), DT = iso => when(ms(iso), iso), DD = iso => dateAt(ms(iso), iso);
+const sDate = iso => { const p = parts(ms(iso), offMin(iso)); return `${p.d} ${MO[p.mo]}`; };   // "Nov 18"
 function rangeStr(a, b) {
   const pa = parts(ms(a), offMin(a)), pb = parts(ms(b), offMin(b));
-  if (pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d) return `${MO[pa.mo]} ${pa.d}, ${pa.y}`;
-  if (pa.y === pb.y) return `${MO[pa.mo]} ${pa.d} – ${MO[pb.mo]} ${pb.d}, ${pb.y}`;
-  return `${MO[pa.mo]} ${pa.d}, ${pa.y} – ${MO[pb.mo]} ${pb.d}, ${pb.y}`;
+  if (pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d) return `${pa.d} ${MO[pa.mo]} ${pa.y}`;
+  if (pa.y === pb.y) return `${pa.d} ${MO[pa.mo]} – ${pb.d} ${MO[pb.mo]} ${pb.y}`;
+  return `${pa.d} ${MO[pa.mo]} ${pa.y} – ${pb.d} ${MO[pb.mo]} ${pb.y}`;
 }
 function rel(dt) {
-  const a = Math.abs(dt), s = dt >= 0 ? "in " : "", e = dt < 0 ? " ago" : "";
+  const a = Math.abs(dt), s = dt >= 0 ? "en " : "hace ", e = "";
   if (a < 90 * M) return `${s}${Math.max(1, Math.round(a / M))} min${e}`;
   if (a < 36 * H) return `${s}${Math.round(a / H)} h${e}`;
-  return `${s}${Math.round(a / D)} days${e}`;
+  return `${s}${Math.round(a / D)} días${e}`;
 }
 const now = () => state.override ?? Date.now();
 
@@ -402,7 +403,7 @@ const appHref = u => {
 };
 const hrefAttrs = u => { const h = appHref(u); return h === u ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(h)}"`; };
 const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" ${hrefAttrs(href)}>${esc(label)} ↗</a>` : "";
-const copyBtn = v => `<button class="copy" data-copy="${esc(v)}">Copy</button>`;
+const copyBtn = v => `<button class="copy" data-copy="${esc(v)}">Copiar</button>`;
 const codeRow = (label, v) => v ? `<dt>${esc(label)}</dt><dd><span class="code">${esc(v)}</span>${copyBtn(v)}</dd>` : "";
 const row = (label, v) => v ? `<dt>${esc(label)}</dt><dd>${v}</dd>` : "";
 // The one link that takes you straight to checking in for a flight or hotel
@@ -439,7 +440,7 @@ const arrives = f => `${T(f.end)} ${esc(city(f))} time${DD(f.end) !== DD(f.start
 
 function paxList(list) {
   if (!list || !list.length) return "";
-  return `<div class="pax">${list.map(p => `<div${p.name === state.person ? ` class="me" ` : ""}><b data-me="${p.name === MAIN ? "you" : "selected"}">${esc(p.name)}</b>${p.seat ? `<span class="code">Seat ${esc(p.seat)}</span>` : ""}${p.booking ? `<span class="code">Booking ${esc(p.booking)}</span>` : ""}</div>`).join("")}</div>`;
+  return `<div class="pax">${list.map(p => `<div${p.name === state.person ? ` class="me" ` : ""}><b data-me="${p.name === MAIN ? "you" : "selected"}">${esc(p.name)}</b>${p.seat ? `<span class="code">Asiento ${esc(p.seat)}</span>` : ""}${p.booking ? `<span class="code">Reserva ${esc(p.booking)}</span>` : ""}</div>`).join("")}</div>`;
 }
 const notes = arr => (arr || []).map(n => `<p class="note">• ${esc(n)}</p>`).join("");
 
@@ -489,7 +490,7 @@ function actionCard(a, t) {
     title = `Check in for ${esc(s.flightNumber)} to ${esc(city(s))}`;
     sub = `Departs ${DT(s.start)} from ${esc(apName(s.from))} (${esc(s.from)}). Arrives ${arrives(s)}. Check-in opened ${when(opened, s.start)}.`;
     body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${ckToggle(s)}${link(status(s), "Track on Flightradar24")}</div>
-      <dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
+      <dl class="kv">${codeRow("Código de reserva", s.confirmation)}${row("Cabina", esc(s.cabin))}${row("Equipaje", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
   } else if (a.k === "airport") {
     const lead = (s.international ? 3 : 2);
     eyebrow = "Time to go";
@@ -548,12 +549,12 @@ function actionCard(a, t) {
     eyebrow = "Today";
     title = `Check out of ${esc(s.title)} by ${T(s.end)}`;
     sub = `${rel(ms(s.end) - now())}.`;
-    body = `<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Phone", esc(s.phone))}</dl>`;
+    body = `<dl class="kv">${codeRow("Código de reserva", s.confirmation)}${row("Teléfono", esc(s.phone))}</dl>`;
   } else if (a.k === "hotelcheckin") {
     eyebrow = "Hotel check-in";
     title = `Check in online for ${esc(s.title)}`;
     sub = `Rooms are ready from ${DT(s.start)}. ${esc(s.onlineCheckin.note || "")}`;
-    body = `<div class="btns">${ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true)}${link(maps(s.address), "Map")}</div><dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>`;
+    body = `<div class="btns">${ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true)}${link(maps(s.address), "Mapa")}</div><dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>`;
   } else if (a.k === "stay") {
     eyebrow = "Where you are";
     title = `Staying at ${esc(s.title)}`;
@@ -562,7 +563,7 @@ function actionCard(a, t) {
     eyebrow = s.type === "transfer" ? "Transfer" : "Rental car";
     title = esc(s.title);
     sub = `${s.type === "transfer" ? "Pickup" : "Pick up"} ${DT(s.start)} at ${esc(s.address || "")}.`;
-    body = `<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Phone", esc(s.phone))}</dl>${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}<div class="btns">${link(s.link, "Manage booking")}</div>`;
+    body = `<dl class="kv">${codeRow("Código de reserva", s.confirmation)}${row("Teléfono", esc(s.phone))}</dl>${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}<div class="btns">${link(s.link, "Ver reserva")}</div>`;
   } else if (a.k === "return") {
     eyebrow = "Rental car";
     title = `Return ${esc(s.title)}`;
@@ -600,9 +601,9 @@ function seatInfo(seat, aircraft) {
   if (!lay) lay = { groups: "GHJKL".includes(letter) ? ["ABC", "DEFG", "JKL"] : ["ABC", "DEF"], rows: Math.max(30, row + 4) };
   const gi = lay.groups.findIndex(g => g.includes(letter)); if (gi < 0) return null;
   const g = lay.groups[gi], k = g.indexOf(letter);
-  const kind = (gi === 0 && k === 0) || (gi === lay.groups.length - 1 && k === g.length - 1) ? "window" : (k === 0 || k === g.length - 1) ? "aisle" : "middle";
-  const side = gi === 0 ? "left side" : gi === lay.groups.length - 1 ? "right side" : "center section";
-  const where = row / lay.rows < 0.34 ? "near the front" : row / lay.rows < 0.67 ? "in the middle" : "near the back";
+  const kind = (gi === 0 && k === 0) || (gi === lay.groups.length - 1 && k === g.length - 1) ? "ventanilla" : (k === 0 || k === g.length - 1) ? "pasillo" : "del medio";
+  const side = gi === 0 ? "lado izquierdo" : gi === lay.groups.length - 1 ? "lado derecho" : "sección central";
+  const where = row / lay.rows < 0.34 ? "adelante" : row / lay.rows < 0.67 ? "en el medio" : "atrás";
   return { row, letter, lay, kind, side, where, rows: Math.max(lay.rows, row) };
 }
 function seatMap(si) {
@@ -619,7 +620,7 @@ function seatMap(si) {
     <path d="M150 38 L190 4 L206 4 L196 38 Z M150 82 L190 116 L206 116 L196 82 Z" fill="#E3E9F0"/>
     <path d="M58 34 H298 Q312 34 312 60 Q312 86 298 86 H58 Q20 86 12 60 Q20 34 58 34 Z" fill="#F4F7FA" stroke="#B8C4D2"/>
     ${dots}<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="6" fill="#E0571B" stroke="#fff" stroke-width="2"/>
-    <text x="18" y="64" font-size="9" fill="#8A97A6">front</text>
+    <text x="18" y="64" font-size="9" fill="#8A97A6">frente</text>
     <text x="${Math.min(sx, 290).toFixed(1)}" y="${sy < 60 ? 24 : 104}" font-size="11" font-weight="700" text-anchor="middle" fill="#E0571B">${si.row}${si.letter}</text>
   </svg>`;
 }
@@ -628,9 +629,9 @@ function myFlightInfo(f) {
   const p = (f.travelers || []).find(t => typeof t === "object" && t.name === state.person);
   if (!p) return "";
   const si = seatInfo(p.seat, f.aircraft);
-  const wc = p.wheelchair ? ({ confirmed: `<span class="wc ok">♿ Wheelchair confirmed ✓</span>`, requested: `<span class="wc pend">♿ Wheelchair requested, not confirmed yet</span>`, "not requested": `<span class="wc no">♿ No wheelchair requested on this booking</span>` }[p.wheelchair] || "") : "";
+  const wc = p.wheelchair ? ({ confirmed: `<span class="wc ok">♿ Silla de ruedas confirmada ✓</span>`, requested: `<span class="wc pend">♿ Silla de ruedas pedida, falta la confirmación</span>`, "not requested": `<span class="wc no">♿ Sin silla de ruedas en esta reserva</span>` }[p.wheelchair] || "") : "";
   return `<div class="myseat">
-    ${p.seat ? `<div><b>${state.person === MAIN ? "Your seat" : `${esc(first(p.name))}'s seat`}: ${esc(p.seat)}</b>${p.seatNote ? ` · ${esc(p.seatNote)}` : ""}${si ? `<span class="muted"> · ${si.kind}, ${si.side}, ${si.where}${f.aircraft ? ` (${esc(f.aircraft)})` : ""}</span>` : ""}</div>` : ""}
+    ${p.seat ? `<div><b>${state.person === MAIN ? "Tu asiento" : `Asiento de ${esc(first(p.name))}`}: ${esc(p.seat)}</b>${p.seatNote ? ` · ${esc(p.seatNote)}` : ""}${si ? `<span class="muted"> · ${si.kind}, ${si.side}, ${si.where}${f.aircraft ? ` (${esc(f.aircraft)})` : ""}</span>` : ""}</div>` : ""}
     ${si ? seatMap(si) : ""}
     ${p.baggage ? `<div class="note">🧳 ${esc(p.baggage)}</div>` : ""}${wc}</div>`;
 }
@@ -644,11 +645,12 @@ function ckHelper(f) {
   const code = p.booking || f.confirmation, url = f.checkinUrl || f.airline.checkin, t0 = Date.now();
   const opens = ms(f.start) - (f.airline.checkinHours || 24) * H, closes = ms(f.start) - 45 * M;
   if (t0 > ms(f.start)) return "";
-  const status = t0 < opens ? `Check-in opens <b>${DT(isoAt(opens, f.start))}</b> (24 hours before the flight).` : t0 < closes ? `<b>Check-in is open now.</b>` : `Online check-in may be closed; go to the ${esc(f.airline.name)} counter.`;
-  return `<div class="ckhelp"><div class="eyebrow">Check in yourself</div><p class="note">${status}</p>
-    <dl class="kv">${codeRow("Reservation code", code)}${p.lastName ? codeRow("Last name", p.lastName) : ""}${p.firstName ? row("First name", esc(p.firstName)) : ""}</dl>
-    <p class="note">Tap <b>Check in</b>, enter the reservation code and last name exactly as shown, then follow the steps to get your boarding pass.</p>
-    <div class="btns">${link(url, `Check in on ${f.airline.name}`, t0 >= opens)}</div></div>`;
+  const status = t0 < opens ? `El check-in abre el <b>${DT(isoAt(opens, f.start))}</b> (24 horas antes del vuelo).` : t0 < closes ? `<b>El check-in ya está abierto.</b>` : `El check-in online puede estar cerrado; andá al mostrador de ${esc(f.airline.name)}.`;
+  return `<div class="ckhelp"><div class="eyebrow">Hacé tu check-in</div><p class="note">${status}</p>
+    <dl class="kv">${codeRow("Código de reserva", code)}${p.lastName ? codeRow("Apellido", p.lastName) : ""}${p.firstName ? row("Nombre", esc(p.firstName)) : ""}</dl>
+    <p class="note">Tocá <b>Hacer check-in</b>, escribí el código de reserva y el apellido tal cual aparecen acá y seguí los pasos para obtener la tarjeta de embarque.</p>
+    ${p.docNote ? `<p class="note">🛂 ${esc(p.docNote)}</p>` : ""}
+    <div class="btns">${link(url, `Hacer check-in en ${f.airline.name}`, t0 >= opens)}${p.docLink ? link(p.docLink, "Ver pasaporte (Drive)") : ""}</div></div>`;
 }
 function flightTopCard(f) {
   const t0 = now(), landed = t0 >= ms(f.end), flying = t0 >= ms(f.start) && !landed;
@@ -676,12 +678,12 @@ function lodgingCard(s, label) {
     <div class="eyebrow">${esc(label)}</div>
     <h3>${esc(s.title)}</h3>
     <dl class="kv">
-      ${row("Address", `${esc(s.address)}${copyBtn(s.address)}`)}
+      ${row("Dirección", `${esc(s.address)}${copyBtn(s.address)}`)}
       ${s.home ? "" : row("Check-in", DT(s.start)) + row("Check-out", DT(s.end))}
-      ${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>${copyBtn(s.phone)}` : "")}
+      ${codeRow("Código de reserva", s.confirmation)}${row("Teléfono", s.phone ? `<span class="code">${esc(s.phone)}</span>${copyBtn(s.phone)}` : "")}
     </dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}
-    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !hotelCk(s))}${link(s.link, "Manage booking")}</div>
+    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !hotelCk(s))}${link(s.link, "Ver reserva")}</div>
   </section>`;
 }
 
@@ -697,7 +699,7 @@ function renderNow() {
   let html = previewControls();
   if (!active.length) {
     const next = tripsFor(state.person).find(t => ms(t.start) > t0);
-    if (!next) return html + `<div class="empty">No upcoming trips.</div>`;
+    if (!next) return html + `<div class="empty">No hay próximos viajes.</div>`;
     const firstAct = actionsFor(next).filter(a => a.k !== "stay").sort((a, b) => a.from - b.from)[0];
     html += `<section class="hero"><div class="hero-head calm"><div class="eyebrow">No trip right now</div>
       <h2>Next: ${esc(next.title)}</h2><p class="sub">${rangeStr(next.start, next.end)} · starts ${rel(ms(next.start) - t0)}</p></div>
@@ -836,21 +838,21 @@ function ridesFor(trip) {
     // arriving: airport -> where you're staying
     if (!connOut && !driveMin(f.to) && !hasGround(segs, en, en + 8 * H)) {
       const stay = segs.find(x => x.type === "lodging" && ms(x.start) < en + 8 * H && ms(x.end) > en);
-      if (stay) rides.push({ id: `ride-${f.id}`, type: "ride", dir: "in", title: `Uber to ${stay.title}`, from: `${f.to} airport`, fromLabel: apName(f.to) + " airport",
+      if (stay) rides.push({ id: `ride-${f.id}`, type: "ride", dir: "in", title: `Uber a ${stay.title}`, from: `${f.to} airport`, fromLabel: "Aeropuerto de " + apName(f.to),
         toAddr: stay.address, to: stay.title, home: stay.home, start: isoAt(en + 40 * M, f.end), end: isoAt(en + 2 * H, f.end) });
     }
     // leaving: where you're staying -> airport
     if (!connIn && !driveMin(f.from) && !hasGround(segs, st - 6 * H, st)) {
       const stay = segs.filter(x => x.type === "lodging" && ms(x.end) <= st + 2 * H && ms(x.end) >= st - 18 * H).pop();
       const lead = (f.international ? 3 : 2) * H;
-      if (stay) rides.push({ id: `ride-${f.id}-out`, type: "ride", dir: "out", title: `Uber to ${apName(f.from)} airport`, fromLabel: stay.title, from: stay.address,
-        toAddr: depPlace(f), to: `${apName(f.from)} airport`, start: isoAt(st - lead - 60 * M, f.start), end: isoAt(st - lead, f.start) });
+      if (stay) rides.push({ id: `ride-${f.id}-out`, type: "ride", dir: "out", title: `Uber al aeropuerto de ${apName(f.from)}`, fromLabel: stay.title, from: stay.address,
+        toAddr: depPlace(f), to: `Aeropuerto de ${apName(f.from)}`, start: isoAt(st - lead - 60 * M, f.start), end: isoAt(st - lead, f.start) });
     }
   });
   // trip.ground.mode: "uber" = Uber is the plan (no warning); "family" = family drives (no Uber)
   const gm = trip.ground?.mode;
   rides.forEach(r => { r.plan = gm; r.planNote = trip.ground?.note || "";
-    if (gm === "family") r.title = `Family ride to ${r.to}`; });
+    if (gm === "family") r.title = `Te llevan a ${r.to}`; });
   return rides;
 }
 // Rides sit right next to their flight: the ride to the airport just before it, the ride from it just after.
@@ -864,14 +866,14 @@ function withRides(trip) {
   return out;
 }
 function rideBlock(r) {
-  if (r.plan === "family") return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · Family ride</span>
-    <h4>${r.dir === "in" ? "Family picks you up" : "Family drives you to the airport"}</h4>
-    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)} · around ${T(r.start)}</p>${r.planNote ? `<p class="note">• ${esc(r.planNote)}</p>` : ""}
-    <div class="btns">${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
-  return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · ${logo(brandOf(r))}Uber</span>
-    <h4>${r.plan === "uber" ? esc(r.title) : "No car booked: take an Uber"}</h4>
-    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}${r.home && !r.plan ? " (or a family pickup)" : ""} · around ${T(r.start)}</p>
-    <div class="btns">${link(uber(r.toAddr, r.to), "Open Uber", true)}${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
+  if (r.plan === "family") return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Cómo llegar ·  Family ride</span>
+    <h4>${r.dir === "in" ? "La familia los busca" : "La familia los lleva al aeropuerto"}</h4>
+    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}· aprox. ${T(r.start)}</p>${r.planNote ? `<p class="note">• ${esc(r.planNote)}</p>` : ""}
+    <div class="btns">${link(directions(r.from, r.toAddr), "Cómo llegar")}</div></div></div>`;
+  return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Cómo llegar ·  ${logo(brandOf(r))}Uber</span>
+    <h4>${r.plan === "uber" ? esc(r.title) : "Sin auto: tomá un Uber"}</h4>
+    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}${r.home && !r.plan ? " (or a family pickup)" : ""}· aprox. ${T(r.start)}</p>
+    <div class="btns">${link(uber(r.toAddr, r.to), "Abrir Uber", true)}${link(directions(r.from, r.toAddr), "Cómo llegar")}</div></div></div>`;
 }
 
 // Finished items (flight landed, dinner over, hotel checked out) fold into a slim "Done" line; tap to see the full card.
@@ -888,36 +890,36 @@ const doneAt = s => {
 function segOrDone(s) {
   if (!s.end || doneAt(s) > Date.now()) return segBlock(s);
   const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
-  return `<details class="seg-done"><summary><span class="done-chip">✓ Done</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
+  return `<details class="seg-done"><summary><span class="done-chip">✓ Listo</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
 }
 // Cancellation terms on a reservation: {deadline: ISO or null, fee, terms}. Warns when the free-cancel deadline is close.
 function cancelInfo(s) {
   const c = s.cancellation; if (!c) return "";
   const t0 = Date.now(), dl = c.deadline ? ms(c.deadline) : null;
   let line;
-  if (dl && dl > t0) line = `Free to cancel until <b>${DT(c.deadline)}</b>; after that ${esc(c.fee)}`;
-  else if (dl) line = `Cancelling now costs <b>${esc(c.fee)}</b> (free cancellation ended ${DT(c.deadline)})`;
+  if (dl && dl > t0) line = `Cancelación gratis hasta el <b>${DT(c.deadline)}</b>; después ${esc(c.fee)}`;
+  else if (dl) line = `Cancelar ahora cuesta <b>${esc(c.fee)}</b> (la cancelación gratis terminó el ${DT(c.deadline)})`;
   else line = `<b>${esc(c.fee)}</b>`;
   const soon = dl && dl > t0 && dl - t0 < 2 * D;
-  return `<div class="${soon ? "flag" : "note cancel"}">${soon ? `Cancel by ${DT(c.deadline)} to avoid ${esc(c.fee)}.` : `Cancellation: ${line}.`}${c.terms ? `<br><span class="muted">${esc(c.terms)}</span>` : ""}</div>`;
+  return `<div class="${soon ? "flag" : "note cancel"}">${soon ? `Cancelá antes del ${DT(c.deadline)} para evitar ${esc(c.fee)}.` : `Cancelación: ${line}.`}${c.terms ? `<br><span class="muted">${esc(c.terms)}</span>` : ""}</div>`;
 }
 function segBlock(s) {
   if (s.type === "ride") return rideBlock(s);
   if (s.type === "flight") {
     const dur = ms(s.end) - ms(s.start), hh = Math.floor(dur / H), mm = Math.round((dur % H) / M);
-    return `<div class="seg branded"${brandStyle(s)}><div class="seg-main"><span class="seg-type">${icon(s)}Flight · ${logo(brandOf(s))}${esc(s.airline.name)} ${esc(s.flightNumber)}</span>
-      <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
+    return `<div class="seg branded"${brandStyle(s)}><div class="seg-main"><span class="seg-type">${icon(s)}Vuelo ·  ${logo(brandOf(s))}${esc(s.airline.name)} ${esc(s.flightNumber)}</span>
+      <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">hora de ${esc(apName(s.from))}</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
-      <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
-      <div class="stub">${ckHelper(s)}${myFlightInfo(s)}<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
-      <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
+      <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Llega ${T(s.end)}</b><br><span class="tz">hora de ${esc(apName(s.to))}</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
+      <div class="stub">${ckHelper(s)}${myFlightInfo(s)}<dl class="kv">${codeRow("Código de reserva", s.confirmation)}${row("Cabina", esc(s.cabin))}${row("Equipaje", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
+      <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Gestionar en ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
-  const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
+  const label = s.home ? "Casa de familia" : ({ restaurant: "Restaurante", movie: "Cine", show: "Espectáculo", event: "Evento" }[s.kind]) || ({ lodging: "Estadía", car: "Auto de alquiler", transfer: "Traslado", activity: "Actividad" }[s.type] || s.type);
   return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
-    <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
-    ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
+    <dl class="kv">${row(s.home ? "Llegada" : s.type === "lodging" ? "Check-in" : "Empieza", DT(s.start))}${row(s.home ? "Salida" : s.type === "lodging" ? "Check-out" : "Termina", DT(s.end))}
+    ${s.address ? row("Dirección", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Código de reserva", s.confirmation)}${row("Teléfono", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
-    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Mapa") : ""}${link(s.link, "Ver reserva")}</div></div></div>`;
 }
 
 // "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
@@ -925,15 +927,15 @@ function tripEnds(t) {
   const fl = t.segments.filter(x => x.type === "flight");
   const out = fl[0], back = fl.length > 1 ? fl[fl.length - 1] : null;
   const leave = out ? `${DD(out.start)} (${esc(out.from)})` : DD(t.start);
-  const end = back ? ["Back", `${DD(back.end)} (${esc(back.to)})`] : out ? ["Arrive", `${DD(out.end)} (${esc(out.to)})`] : ["Until", DD(t.end)];
-  return `<div class="ends"><span><b>Leave</b> ${leave}</span><span><b>${end[0]}</b> ${end[1]}</span></div>`;
+  const end = back ? ["Vuelta", `${DD(back.end)} (${esc(back.to)})`] : out ? ["Llega", `${DD(out.end)} (${esc(out.to)})`] : ["Hasta", DD(t.end)];
+  return `<div class="ends"><span><b>Sale</b> ${leave}</span><span><b>${end[0]}</b> ${end[1]}</span></div>`;
 }
 
 function quickRow(t) {
   const items = t.segments.filter(x => checkinLink(x) && !isCheckedIn(x) && Date.now() < ckUntil(x));
   if (!items.length) return "";
-  const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
-  return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
+  const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${sDate(x.start)}` : `Hotel · ${sDate(x.start)}`;
+  return `<div class="quick"><span class="eyebrow">Check-in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
 }
 
 // Opened from the home-screen shortcut: one big button per upcoming check-in (next 14 days first)
@@ -966,17 +968,17 @@ function renderTrips(past) {
   const t0 = Date.now();
   const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
   if (past) list.reverse();
-  if (!list.length) return `<div class="empty">${past ? "No past trips yet. Trips move here after they end." : "No upcoming trips."}</div>`;
+  if (!list.length) return `<div class="empty">${past ? "Todavía no hay viajes pasados. Los viajes pasan acá cuando terminan." : "No hay próximos viajes."}</div>`;
   let html = "", lastMonth = "";
   list.forEach((t, i) => {
     const p = parts(ms(t.start), offMin(t.start)), mk = `${MO[p.mo]} ${p.y}`;
-    if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
+    if (mk !== lastMonth) { html += `<div class="month">${["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     const soon = !past && ms(t.start) - t0 < 7 * D;
     html += `<details class="trip${t.work ? " work" : ""}" style="--tc:${t.work ? "#4285F4" : TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
       ${workRibbon(t)}${tripPhoto(t)}
       <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
-      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentative</span>` : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
+      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentativo</span>` : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Empieza " + rel(ms(t.start) - t0) : "En curso"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} no va en este viaje</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
       </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segOrDone).join("")}</div></details>`;
@@ -988,12 +990,12 @@ function renderTrips(past) {
 function renderFamily() {
   const t0 = Date.now();
   const list = state.family.filter(t => ms(t.end) > t0 - 2 * D);
-  if (!list.length) return `<div class="empty">No upcoming trips.</div>`;
-  return list.map(t => `<section class="card fam-card"><div class="eyebrow">${rangeStr(t.start, t.end)}${ms(t.start) <= t0 && t0 <= ms(t.end) ? " · Happening now" : ""}</div>
+  if (!list.length) return `<div class="empty">No hay próximos viajes.</div>`;
+  return list.map(t => `<section class="card fam-card"><div class="eyebrow">${rangeStr(t.start, t.end)}${ms(t.start) <= t0 && t0 <= ms(t.end) ? " · En curso" : ""}</div>
     <h3>${esc(t.title)}</h3><div class="muted">${esc(t.place)}</div>
-    <div class="chips">${t.withViewer ? `<span class="chip soon">You're on this trip</span>` : ""}${t.who.map(n => `<span class="chip">${first(n)}</span>`).join("")}</div>
-    ${t.flights.length ? `<div class="eyebrow" style="margin-top:6px">Flights</div><ul class="next">${t.flights.map(f => `<li><span class="when">${DD(f.start)}</span><span><b>${icon({ type: "flight" })}${esc(f.airline)} ${esc(f.flightNumber)} · ${esc(f.from)} → ${esc(f.to)}</b><br><span class="muted">Departs ${T(f.start)} · arrives ${T(f.end)}${DD(f.end) !== DD(f.start) ? ` (${DD(f.end)})` : ""} local time</span>${f.who.length ? `<br><span class="muted">${f.who.map(first).join(", ")}</span>` : ""}</span></li>`).join("")}</ul>` : `<p class="note">No flights booked yet.</p>`}
-    ${t.stays.length ? `<div class="eyebrow" style="margin-top:6px">Staying at</div><ul class="next">${t.stays.map(s => `<li><span class="when">${DD(s.start)}</span><span><b>${icon({ type: "lodging" })}${esc(s.title)}</b><br><span class="muted">until ${DD(s.end)}</span></span></li>`).join("")}</ul>` : ""}
+    <div class="chips">${t.withViewer ? `<span class="chip soon">Estás en este viaje</span>` : ""}${t.who.map(n => `<span class="chip">${first(n)}</span>`).join("")}</div>
+    ${t.flights.length ? `<div class="eyebrow" style="margin-top:6px">Vuelos</div><ul class="next">${t.flights.map(f => `<li><span class="when">${DD(f.start)}</span><span><b>${icon({ type: "flight" })}${esc(f.airline)} ${esc(f.flightNumber)} · ${esc(f.from)} → ${esc(f.to)}</b><br><span class="muted">Sale ${T(f.start)} · llega ${T(f.end)}${DD(f.end) !== DD(f.start) ? ` (${DD(f.end)})` : ""} hora local</span>${f.who.length ? `<br><span class="muted">${f.who.map(first).join(", ")}</span>` : ""}</span></li>`).join("")}</ul>` : `<p class="note">Todavía sin vuelos.</p>`}
+    ${t.stays.length ? `<div class="eyebrow" style="margin-top:6px">Alojamiento</div><ul class="next">${t.stays.map(s => `<li><span class="when">${DD(s.start)}</span><span><b>${icon({ type: "lodging" })}${esc(s.title)}</b><br><span class="muted">hasta el ${DD(s.end)}</span></span></li>`).join("")}</ul>` : ""}
   </section>`).join("");
 }
 
@@ -1005,7 +1007,7 @@ function renderLocal() {
   let html = "", lastMonth = "";
   next.forEach(s => {
     const p = parts(ms(s.start), offMin(s.start)), mk = `${MO[p.mo]} ${p.y}`;
-    if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
+    if (mk !== lastMonth) { html += `<div class="month">${["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     html += segBlock(s);
   });
   if (!next.length) html += `<div class="empty">Nothing planned around home yet. Restaurant reservations, movie and show tickets, and local hotel stays show up here.</div>`;
@@ -1026,7 +1028,7 @@ const BANNER_HOURS = 24;  // the red banner shows a run's changes for a day, the
 function renderBanner() {
   const s = state.status;
   if (!s) return "";
-  const checked = s.lastChecked ? `Last checked ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "";
+  const checked = s.lastChecked ? `Última revisión: ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "";
   const about = document.getElementById("about-checked"); if (about) about.textContent = checked;
   if (state.view === "changes") return "";
   const fresh = runsOf(s).filter(r => Date.now() - Date.parse(r.at) < BANNER_HOURS * H).flatMap(r => r.changes || []);
@@ -1034,14 +1036,14 @@ function renderBanner() {
   return `<div class="banner alert"><strong>${fresh.length} change${fresh.length > 1 ? "s" : ""} in the last day</strong>${fresh.slice(0, 4).map(c => `<span>${esc(c.text)}</span>`).join("")}<span><a href="#changes">${fresh.length > 4 ? `See all ${fresh.length} in Changes` : "History in Changes"} ›</a></span></div>`;
 }
 const tripName = id => id === "local" ? "Local" : (state.trips.find(t => t.id === id)?.title || "");
-const runWhen = at => new Date(at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const runWhen = at => new Date(at).toLocaleString("es-UY", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 function renderChanges() {
   const runs = runsOf(state.status);
   if (!runs.length) return `<div class="empty">No checks recorded yet. Every check adds an entry here, newest first.</div>`;
   const label = { added: "Added", changed: "Changed", removed: "Removed", note: "Note" };
   let html = "", lastDay = "";
   runs.forEach(r => {
-    const day = new Date(r.at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const day = new Date(r.at).toLocaleDateString("es-UY", { month: "long", year: "numeric" });
     if (day !== lastDay) { html += `<div class="month">${day}</div>`; lastDay = day; }
     const ch = r.changes || [];
     html += `<section class="run"><div class="run-head"><b>${esc(runWhen(r.at))}</b><span>${r.kind === "daily" ? "Scheduled check" : "Check on request"}</span></div>
@@ -1053,8 +1055,8 @@ function renderChanges() {
 
 function renderCredits() {
   const el = document.getElementById("photo-credits"); if (!el || el.dataset.done) return;
-  el.innerHTML = "Trip photos from Wikimedia Commons: " + Object.values(PHOTO_CREDITS).map(c =>
-    `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title.replace(/\.(jpe?g|png)$/i, ""))}</a> by ${esc(c.artist)} (${esc(c.license)})`).join("; ") + ". Hotel photos load directly from each hotel's own website.";
+  el.innerHTML = "Fotos de los viajes de Wikimedia Commons: " + Object.values(PHOTO_CREDITS).map(c =>
+    `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title.replace(/\.(jpe?g|png)$/i, ""))}</a> de ${esc(c.artist)} (${esc(c.license)})`).join("; ") + ". Las fotos de los hoteles vienen de la página de cada hotel.";
   el.dataset.done = "1";
 }
 
@@ -1062,7 +1064,7 @@ function render() {
   if (VIEW_ONLY) document.getElementById("changes-link")?.remove();
   if (NO_NOW) {
     document.getElementById("tab-now")?.remove();
-    const tt = document.getElementById("tab-trips"); if (tt) tt.textContent = "Trips";
+    const tt = document.getElementById("tab-trips"); if (tt) tt.textContent = "Viajes";
     if (state.view === "now" || state.view === "checkin") state.view = "trips";
   }
   const ft = document.getElementById("tab-family");
@@ -1076,23 +1078,23 @@ function render() {
   document.querySelector(".who").hidden = state.locked || !state.loaded;
   document.querySelector(".tabs").hidden = state.locked;
   if (state.locked) {
-    app.innerHTML = `<form class="card" id="unlock" autocomplete="on"><div class="eyebrow">Private</div><h3>Enter the family passphrase</h3>
-      <p class="note">Trips are encrypted. You only need to do this once on this device.</p>
+    app.innerHTML = `<form class="card" id="unlock" autocomplete="on"><div class="eyebrow">Privado</div><h3>Ingresá la contraseña</h3>
+      <p class="note">Los viajes están protegidos. Solo hay que hacerlo una vez en este teléfono.</p>
       <input id="pass" type="password" autocomplete="current-password" aria-label="Passphrase" style="font:inherit;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">
       ${state.unlockError ? `<div class="flag">${esc(state.unlockError)}</div>` : ""}
-      <div class="btns"><button class="btn primary" type="submit">Unlock</button></div></form>`;
+      <div class="btns"><button class="btn primary" type="submit">Entrar</button></div></form>`;
     return;
   }
   if (state.error) { app.innerHTML = `<div class="empty">${esc(state.error)}</div>`; return; }
-  if (!state.loaded) { app.innerHTML = `<div class="empty">Loading trips…</div>`; return; }
+  if (!state.loaded) { app.innerHTML = `<div class="empty">Cargando viajes…</div>`; return; }
   if (!state.trips.length) { app.innerHTML = `<div class="empty">No trips loaded yet. They'll appear here once they're added.</div>`; return; }
   const people = allPeople();
   if (!people.includes(state.person)) state.person = MAIN;
   const sel = document.getElementById("person");
-  const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
+  const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (yo)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} próximos</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
+  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Viajes pasados</div>` : "") + renderTrips(state.view === "past");
   app.innerHTML = body + renderBanner();  // recent changes sit at the bottom (user preference); full history is under "Change history"
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
@@ -1101,7 +1103,7 @@ function render() {
 function tick() {
   const c = document.getElementById("clock");
   const d = new Date();
-  c.textContent = d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  c.textContent = d.toLocaleString("es-UY", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 document.addEventListener("click", e => {
@@ -1117,7 +1119,7 @@ document.addEventListener("click", e => {
   const cp = e.target.closest(".copy");
   if (cp) {
     const v = cp.dataset.copy;
-    const done = () => { cp.textContent = "Copied"; setTimeout(() => cp.textContent = "Copy", 1500); };
+    const done = () => { cp.textContent = "Copiado"; setTimeout(() => cp.textContent = "Copiar", 1500); };
     try { navigator.clipboard.writeText(v).then(done, () => selectText(cp)); } catch (_) { selectText(cp); }
     return;
   }
@@ -1174,7 +1176,7 @@ async function load() {
     if (!r.ok) throw new Error(r.status);
     blob = await r.json();
   } catch (e) {
-    state.error = "Couldn't load trips. Check your connection and reopen the app."; render(); return;
+    state.error = "No se pudieron cargar los viajes. Revisá la conexión y volvé a abrir la app."; render(); return;
   }
   let saved = null; try { saved = localStorage.getItem("tba-pass"); } catch (_) {}
   if (saved && await tryUnlock(saved, false)) return;
@@ -1185,7 +1187,7 @@ document.addEventListener("submit", async e => {
   if (e.target.id !== "unlock") return;
   e.preventDefault();
   const pass = document.getElementById("pass").value.trim();
-  if (!(await tryUnlock(pass, true))) { state.unlockError = "That passphrase didn't work. Check spelling and dashes."; render(); }
+  if (!(await tryUnlock(pass, true))) { state.unlockError = "Esa contraseña no funcionó. Revisá cómo está escrita y los guiones."; render(); }
 });
 document.getElementById("lock").addEventListener("click", () => {
   try { localStorage.removeItem("tba-pass"); } catch (_) {}
