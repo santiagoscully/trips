@@ -212,6 +212,25 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .chip.tentative{background:#FFF4E0;color:#B26A00;font-weight:700;border:1px dashed #E0A040}
 .chip.work-chip{background:#E8F0FE;color:#1A73E8;font-weight:700}
 .ckhelp{display:grid;gap:6px;border:2px solid var(--sky, #1E6FD9);border-radius:12px;padding:10px 12px;background:var(--surface)}
+/* Alicia's copy: bigger text and the key-info tiles */
+body.big{font-size:19px}
+body.big .note,body.big .kv dd,body.big .muted{font-size:17px}
+body.big .btn{font-size:17px;padding:12px 16px}
+.keyinfo{display:grid;gap:10px;margin:4px 0 10px}
+.kt-time{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;background:var(--surface-2);border-radius:14px;padding:12px 14px}
+.kt-time>div{display:grid;gap:2px}.kt-time>div:last-child{text-align:right}
+.kt-time b{font:800 34px/1.05 var(--display, var(--body));letter-spacing:-.01em}
+.kt-time span{font-size:15px;color:var(--muted)}
+.kt-arrow{font-size:26px;color:var(--sky, #1E6FD9)}
+.kt-l{font:800 13px/1.2 var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.kt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kt{display:grid;gap:4px;align-content:start;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:12px}
+.kt-wide{grid-column:1 / -1}
+.kt-big{font:800 40px/1 var(--display, var(--body))}
+.kt span:not(.kt-l){font-size:16px;color:var(--ink)}
+.kt-bags{font-size:17px!important;line-height:1.4}
+.kt-wc{font:800 19px/1.25 var(--body);padding:8px 10px;border-radius:10px}
+.kt-wc.ok{background:var(--good-soft);color:var(--good)}.kt-wc.pend{background:var(--now-soft);color:var(--now)}.kt-wc.no{background:var(--surface-2);color:var(--muted)}
 .myseat{display:grid;gap:6px;background:var(--surface-2);border-radius:12px;padding:10px 12px}
 .seatmap{width:100%;max-width:360px;height:auto}
 .wc{font:700 13px/1.3 var(--body);padding:6px 10px;border-radius:8px;justify-self:start}
@@ -624,10 +643,27 @@ function seatMap(si) {
     <text x="${Math.min(sx, 290).toFixed(1)}" y="${sy < 60 ? 24 : 104}" font-size="11" font-weight="700" text-anchor="middle" fill="#E0571B">${si.row}${si.letter}</text>
   </svg>`;
 }
+// Alicia's copy (CHECKIN_HELP): big, visual "what matters" block — times, seat, bags, wheelchair.
+function keyTiles(f, p) {
+  const si = seatInfo(p.seat, f.aircraft);
+  const wcs = { confirmed: ["ok", "Confirmada ✓"], requested: ["pend", "Pedida, falta confirmar"], "not requested": ["no", "No pedida"] }[p.wheelchair];
+  return `<div class="keyinfo">
+    <div class="kt-time"><div><span class="kt-l">Sale</span><b>${T(f.start)}</b><span>${DD(f.start)} · ${esc(f.from)}</span></div>
+      <div class="kt-arrow" aria-hidden="true">✈</div>
+      <div><span class="kt-l">Llega</span><b>${T(f.end)}</b><span>${DD(f.end)} · ${esc(f.to)}</span></div></div>
+    <div class="kt-grid">
+      <div class="kt"><span class="kt-l">💺 Asiento</span><b class="kt-big">${esc(p.seat || "–")}</b>${si ? `<span>${si.kind}, ${si.side}, ${si.where}</span>` : ""}${p.seatNote ? `<span>${esc(p.seatNote)}</span>` : ""}</div>
+      <div class="kt"><span class="kt-l">♿ Silla de ruedas</span>${wcs ? `<b class="kt-wc ${wcs[0]}">${wcs[1]}</b>` : `<b class="kt-wc no">–</b>`}</div>
+      <div class="kt kt-wide"><span class="kt-l">🧳 Equipaje</span><span class="kt-bags">${esc(p.baggage || f.baggage || "–")}</span></div>
+    </div>
+    ${si ? seatMap(si) : ""}
+  </div>`;
+}
 // The selected person's seat, bags and wheelchair status on a flight
 function myFlightInfo(f) {
   const p = (f.travelers || []).find(t => typeof t === "object" && t.name === state.person);
   if (!p) return "";
+  if (CHECKIN_HELP) return keyTiles(f, p);
   const si = seatInfo(p.seat, f.aircraft);
   const wc = p.wheelchair ? ({ confirmed: `<span class="wc ok">♿ Silla de ruedas confirmada ✓</span>`, requested: `<span class="wc pend">♿ Silla de ruedas pedida, falta la confirmación</span>`, "not requested": `<span class="wc no">♿ Sin silla de ruedas en esta reserva</span>` }[p.wheelchair] || "") : "";
   return `<div class="myseat">
@@ -661,7 +697,7 @@ function flightTopCard(f) {
     <div class="eyebrow">${landed ? "Just landed" : flying ? "In the air" : "Your flight"}</div>
     <div class="ft-head">${icon(f)}${logo(brandOf(f))}<b>${esc(f.airline.name)} ${esc(f.flightNumber)}</b><span class="muted">${esc(f.from)} → ${esc(f.to)}</span>${isCheckedIn(f) ? `<span class="ck-done mini">✓ Checked in</span>` : ""}</div>
     <dl class="kv">${row("Departs", `${DT(f.start)} · ${esc(apName(f.from))}${termGate(f.departure) ? ` · ${esc(termGate(f.departure))}` : ""}`)}${row("Arrives", `${arrives(f)}${termGate(f.arrival) ? ` · ${esc(termGate(f.arrival))}` : ""}`)}${row(seatList(f).includes(",") ? "Seats" : "Seat", seatList(f))}${row("Bags", f.baggage ? esc(f.baggage) : "")}${(flying || landed) ? row("Baggage claim", `${f.arrival?.carousel ? `<b>Carousel ${esc(f.arrival.carousel)}</b> · ` : ""}${esc(f.arrival?.bags || "")}`) : ""}${codeRow("Confirmation", f.confirmation)}</dl>
-    ${ckHelper(f)}${myFlightInfo(f)}${leave}
+    ${myFlightInfo(f)}${ckHelper(f)}${leave}
     <div class="btns">${link(f.airline.manage, "Manage reservation", true)}${link(status(f), "Flightradar24")}${ckOpen && !isCheckedIn(f) ? ckLink(f, f.airline.checkin, "Check in") + ckToggle(f) : ""}</div>
   </section>`;
 }
@@ -911,7 +947,7 @@ function segBlock(s) {
       <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">hora de ${esc(apName(s.from))}</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Llega ${T(s.end)}</b><br><span class="tz">hora de ${esc(apName(s.to))}</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
-      <div class="stub">${ckHelper(s)}${myFlightInfo(s)}<dl class="kv">${codeRow("Código de reserva", s.confirmation)}${row("Cabina", esc(s.cabin))}${row("Equipaje", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
+      <div class="stub">${myFlightInfo(s)}${ckHelper(s)}<dl class="kv">${codeRow("Código de reserva", s.confirmation)}${row("Cabina", esc(s.cabin))}${row("Equipaje", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
       <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Gestionar en ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Casa de familia" : ({ restaurant: "Restaurante", movie: "Cine", show: "Espectáculo", event: "Evento" }[s.kind]) || ({ lodging: "Estadía", car: "Auto de alquiler", transfer: "Traslado", activity: "Actividad" }[s.type] || s.type);
@@ -1062,6 +1098,7 @@ function renderCredits() {
 
 function render() {
   if (VIEW_ONLY) document.getElementById("changes-link")?.remove();
+  if (CHECKIN_HELP) document.body.classList.add("big");
   if (NO_NOW) {
     document.getElementById("tab-now")?.remove();
     const tt = document.getElementById("tab-trips"); if (tt) tt.textContent = "Viajes";
