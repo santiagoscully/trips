@@ -1112,6 +1112,25 @@ function localToday() {
   return `<section class="card" aria-label="Today nearby"><div class="eyebrow">Today nearby</div>${items.map(segBlock).join("")}</section>`;
 }
 
+// Now tab: the next local plans after today (dinners, movies, shows, events), in time order
+function localComing() {
+  const t0 = Date.now(), today = new Date().toDateString();
+  const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== today).slice(0, 4);
+  if (!items.length) return "";
+  return `<section class="card" aria-label="Coming up nearby"><div class="eyebrow">Coming up nearby</div><ul class="next">
+    ${items.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${s.address ? `<br><a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
+    <div class="btns"><a class="btn" href="#local">All local plans ›</a></div></section>`;
+}
+// Order the Now tab: today's local plans, then whichever comes first, the next local plan or the trip
+function nowPage() {
+  const t0 = Date.now(), coming = localComing();
+  const firstLocal = localFor(state.person).find(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== new Date().toDateString());
+  const trips = tripsFor(state.person).filter(t => ms(t.end) + 12 * H >= t0);
+  const tripActive = trips.some(t => ms(t.start) - 3 * D <= t0);
+  const localFirst = firstLocal && !tripActive && (!trips.length || ms(firstLocal.start) < ms(trips[0].start));
+  return localToday() + (localFirst ? coming + renderNow() : renderNow() + coming);
+}
+
 // Each check (daily or on request) is a run: {at, kind, summary, changes:[{type: added|changed|removed|note, text, tripId}]}, newest first.
 const runsOf = s => (s?.runs || []).slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 const BANNER_HOURS = 24;  // the red banner shows a run's changes for a day, then they live only in the Changes tab
@@ -1186,7 +1205,7 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "assist" ? renderAssist() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
+  const body = state.view === "now" ? nowPage() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "assist" ? renderAssist() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
   app.innerHTML = body + renderBanner();  // recent changes sit at the bottom (user preference); full history is under "Change history"
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
