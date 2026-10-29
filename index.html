@@ -632,9 +632,12 @@ function myFlightInfo(f) {
 }
 function ckHelper(f) {
   if (!CHECKIN_HELP) return "";
-  const pax = (f.travelers || []).filter(t => typeof t === "object");
-  if (pax.length !== 1 || pax[0].name !== state.person) return "";       // only when she flies alone
-  const p = pax[0], code = p.booking || f.confirmation, url = f.checkinUrl || f.airline.checkin, t0 = Date.now();
+  // Only for HER OWN reservation: she is alone on the booking, or she has a separate booking code nobody else shares.
+  const pax = (f.travelers || []).filter(t => typeof t === "object"), p = pax.find(t => t.name === state.person);
+  if (!p) return "";
+  const solo = pax.length === 1 || (p.booking && !pax.some(t => t !== p && t.booking === p.booking));
+  if (!solo) return "";
+  const code = p.booking || f.confirmation, url = f.checkinUrl || f.airline.checkin, t0 = Date.now();
   const opens = ms(f.start) - (f.airline.checkinHours || 24) * H, closes = ms(f.start) - 45 * M;
   if (t0 > ms(f.start)) return "";
   const status = t0 < opens ? `Check-in opens <b>${DT(isoAt(opens, f.start))}</b> (24 hours before the flight).` : t0 < closes ? `<b>Check-in is open now.</b>` : `Online check-in may be closed; go to the ${esc(f.airline.name)} counter.`;

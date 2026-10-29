@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Alicia's trips</title>
-<meta name="theme-color" content="#10284A">
+<meta name="theme-color" content="#7B2D4A">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="../icons/icon-180.png">
-<link rel="icon" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Trips">
+<meta name="apple-mobile-web-app-title" content="Alicia">
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -633,9 +633,12 @@ function myFlightInfo(f) {
 }
 function ckHelper(f) {
   if (!CHECKIN_HELP) return "";
-  const pax = (f.travelers || []).filter(t => typeof t === "object");
-  if (pax.length !== 1 || pax[0].name !== state.person) return "";       // only when she flies alone
-  const p = pax[0], code = p.booking || f.confirmation, url = f.checkinUrl || f.airline.checkin, t0 = Date.now();
+  // Only for HER OWN reservation: she is alone on the booking, or she has a separate booking code nobody else shares.
+  const pax = (f.travelers || []).filter(t => typeof t === "object"), p = pax.find(t => t.name === state.person);
+  if (!p) return "";
+  const solo = pax.length === 1 || (p.booking && !pax.some(t => t !== p && t.booking === p.booking));
+  if (!solo) return "";
+  const code = p.booking || f.confirmation, url = f.checkinUrl || f.airline.checkin, t0 = Date.now();
   const opens = ms(f.start) - (f.airline.checkinHours || 24) * H, closes = ms(f.start) - 45 * M;
   if (t0 > ms(f.start)) return "";
   const status = t0 < opens ? `Check-in opens <b>${DT(isoAt(opens, f.start))}</b> (24 hours before the flight).` : t0 < closes ? `<b>Check-in is open now.</b>` : `Online check-in may be closed; go to the ${esc(f.airline.name)} counter.`;
