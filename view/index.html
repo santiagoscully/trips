@@ -234,6 +234,11 @@ body.big .btn{font-size:17px;padding:12px 16px}
 .assist{border:2px solid var(--line)}.assist.bad{border-color:var(--bad)}.assist.ok{border-color:var(--good)}
 .kt-wc.bad{background:var(--bad-soft);color:var(--bad)}
 .chip.ins-ok{background:var(--good-soft);color:var(--good);font-weight:700}.chip.ins-no{background:var(--bad-soft);color:var(--bad);font-weight:700}
+.ac-num{font:800 30px/1.1 var(--mono, monospace);letter-spacing:.02em}
+.sos{border:2px solid var(--bad)}
+.sos-steps{margin:4px 0 6px;padding-left:22px;display:grid;gap:8px}.sos-steps li{font-size:17px;line-height:1.4}
+.sos-btns{display:grid;gap:8px}.big-btn{display:block;text-align:center;font-size:18px!important;padding:14px!important;line-height:1.3}
+.big-btn span{font-size:15px;opacity:.85}
 .sologuide{border:2px solid var(--now);border-radius:14px;padding:12px 14px;background:var(--now-soft)}
 .sologuide ol{margin:6px 0 0;padding-left:22px;display:grid;gap:8px}.sologuide li{font-size:17px;line-height:1.4}
 .myseat{display:grid;gap:6px;background:var(--surface-2);border-radius:12px;padding:10px 12px}
@@ -302,6 +307,7 @@ footer .about summary{color:var(--muted)}
       <button class="tab" role="tab" id="tab-trips" data-view="trips" aria-selected="false">Upcoming</button>
       <button class="tab" role="tab" id="tab-local" data-view="local" aria-selected="false">Local</button>
       <button class="tab" role="tab" id="tab-family" data-view="family" aria-selected="false" hidden>Dani's trips</button>
+      <button class="tab" role="tab" id="tab-assist" data-view="assist" aria-selected="false" hidden>🆘 Assist Card</button>
     </nav>
   </header>
   <main id="app"><div class="empty">Loading trips…</div></main>
@@ -1017,7 +1023,30 @@ function assistCard() {
     <h3>${esc(a.plan)}</h3>
     <div class="kt-wc ${valid ? "ok" : "bad"}">${valid ? `Valid until ${d(a.to)}` : `Expired on ${d(a.to)}`}</div>
     ${firstUncovered ? `<p class="note"><b>Renew it before ${DD(firstUncovered.start)}</b> (${esc(firstUncovered.title)}). Trips without coverage are marked below.</p>` : `<p class="note">All your upcoming trips are covered.</p>`}
-    <p class="note">N° ${esc(a.number)} · ${a.phones.map(([k, v]) => `${esc(k)}: <a href="tel:${esc(v.replace(/[^+\d]/g, ""))}">${esc(v)}</a>`).join(" · ")}</p>
+    <p class="note">N° ${esc(a.number)} · <a href="#assist">Emergency contacts ›</a></p>
+    <p class="note muted">From: ${esc(a.source)}</p></section>`;
+}
+// Assist Card tab (Alicia's copy): what to do in a medical emergency while travelling
+function renderAssist() {
+  const a = state.extras?.assistCard; if (!a) return "";
+  const today = new Date().toISOString().slice(0, 10), valid = a.from <= today && today <= a.to;
+  const d = s => rangeStr(s + "T12:00:00+00:00", s + "T12:00:00+00:00");
+  const tel = v => `tel:${v.replace(/[^+\d]/g, "")}`;
+  return `<div class="view-title">🆘 Assist Card</div>
+  <section class="card assist ${valid ? "ok" : "bad"}"><div class="eyebrow">🛡️ Your travel insurance</div>
+    <div class="kt-l">Assist Card number</div><div class="ac-num">${esc(a.number)}</div>${copyBtn(a.number)}
+    <div class="kt-wc ${valid ? "ok" : "bad"}">${valid ? `Valid until ${d(a.to)}` : `Expired on ${d(a.to)}`}</div>
+    <p class="note">${esc(a.plan)}${a.coverage ? ` · coverage up to ${esc(a.coverage)}` : ""} · valid ${d(a.from)} – ${d(a.to)}</p></section>
+  <section class="card sos"><div class="eyebrow">If you need a doctor</div>
+    <ol class="sos-steps">
+      <li><b>In the USA, call Assist Card BEFORE going to an emergency room.</b> If it is life-threatening, call 911 first and Assist Card right after.</li>
+      <li>Easiest: send a WhatsApp or open the Assist Card app (video call with a doctor 24 h, or they book a doctor for you).</li>
+      <li>Give them your Assist Card number (above) and where you are.</li>
+      <li>Have your passport and boarding pass at hand.</li>
+    </ol>
+    <div class="btns sos-btns"><a class="btn primary big-btn" href="https://wa.me/${esc(a.whatsapp.replace(/[^\d]/g, ""))}">💬 WhatsApp Assist Card</a>
+      ${a.phones.map(([k, v]) => `<a class="btn big-btn" href="${tel(v)}">📞 ${esc(k)}<br><span>${esc(v)}</span></a>`).join("")}
+      ${link(a.app, "📱 Assist Card app")}${link(a.phoneList, "Other countries' numbers")}</div>
     <p class="note muted">From: ${esc(a.source)}</p></section>`;
 }
 // Step-by-step directions for an arrival where she travels on her own (segment.soloGuide)
@@ -1131,6 +1160,7 @@ function render() {
   }
   const ft = document.getElementById("tab-family");
   if (ft) { ft.hidden = !FAMILY_TAB; ft.textContent = state.familyLabel || ft.textContent; }
+  const at = document.getElementById("tab-assist"); if (at) at.hidden = !(CHECKIN_HELP && state.extras?.assistCard);
   const lt = document.getElementById("tab-local");
   if (lt && state.loaded) lt.hidden = !state.local.length;   // no Local tab when there are no local plans
   renderCredits();
@@ -1156,7 +1186,7 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
+  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "assist" ? renderAssist() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
   app.innerHTML = body + renderBanner();  // recent changes sit at the bottom (user preference); full history is under "Change history"
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
@@ -1259,7 +1289,7 @@ document.getElementById("lock").addEventListener("click", () => {
 load();
 // refresh data when the app comes back to the foreground
 // shortcuts open "#checkin" / "#now" / "#trips" even when the app is already open
-window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","family","past","changes","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","family","assist","past","changes","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !state.locked && blob) load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();
