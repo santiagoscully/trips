@@ -231,6 +231,11 @@ body.big .btn{font-size:17px;padding:12px 16px}
 .kt-bags{font-size:17px!important;line-height:1.4}
 .kt-wc{font:800 19px/1.25 var(--body);padding:8px 10px;border-radius:10px}
 .kt-wc.ok{background:var(--good-soft);color:var(--good)}.kt-wc.pend{background:var(--now-soft);color:var(--now)}.kt-wc.no{background:var(--surface-2);color:var(--muted)}
+.assist{border:2px solid var(--line)}.assist.bad{border-color:var(--bad)}.assist.ok{border-color:var(--good)}
+.kt-wc.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.ins-ok{background:var(--good-soft);color:var(--good);font-weight:700}.chip.ins-no{background:var(--bad-soft);color:var(--bad);font-weight:700}
+.sologuide{border:2px solid var(--now);border-radius:14px;padding:12px 14px;background:var(--now-soft)}
+.sologuide ol{margin:6px 0 0;padding-left:22px;display:grid;gap:8px}.sologuide li{font-size:17px;line-height:1.4}
 .myseat{display:grid;gap:6px;background:var(--surface-2);border-radius:12px;padding:10px 12px}
 .seatmap{width:100%;max-width:360px;height:auto}
 .wc{font:700 13px/1.3 var(--body);padding:6px 10px;border-radius:8px;justify-self:start}
@@ -947,7 +952,7 @@ function segBlock(s) {
       <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
-      <div class="stub">${myFlightInfo(s)}${ckHelper(s)}<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
+      <div class="stub">${myFlightInfo(s)}${soloGuide(s)}${ckHelper(s)}<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
       <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
@@ -1000,12 +1005,32 @@ const TRIP_COLORS = ["#2E5BEA", "#E0571B", "#0B8F7D", "#8B5CF6", "#D9A100", "#D6
 
 // Work trips (trip.work = {org: "Google"}): a diagonal ribbon across the card's top-right corner with the company logo.
 const workRibbon = t => t.work ? `<div class="work-bar" aria-label="Work trip for ${esc(t.work.org)}">${t.work.logo ? `<img src="../logos/${esc(t.work.logo)}.png" alt="" width="18" height="18">` : ""}<b>WORK</b><span>·</span><b class="org">${esc(t.work.org.toUpperCase())}</b></div>` : "";
+// Alicia's copy: travel-insurance (Assist Card) status, and whether each trip falls inside the coverage dates.
+const assistCovers = t => { const a = state.extras?.assistCard; return !!a && t.start.slice(0, 10) >= a.from && t.end.slice(0, 10) <= a.to; };
+function assistCard() {
+  const a = state.extras?.assistCard; if (!CHECKIN_HELP || !a) return "";
+  const today = new Date().toISOString().slice(0, 10), valid = a.from <= today && today <= a.to;
+  const next = tripsFor(state.person).filter(t => ms(t.end) >= Date.now());
+  const firstUncovered = next.find(t => !assistCovers(t));
+  const d = s => rangeStr(s + "T12:00:00+00:00", s + "T12:00:00+00:00");   // with the year
+  return `<section class="card assist ${valid ? "ok" : "bad"}"><div class="eyebrow">🛡️ Travel insurance</div>
+    <h3>${esc(a.plan)}</h3>
+    <div class="kt-wc ${valid ? "ok" : "bad"}">${valid ? `Valid until ${d(a.to)}` : `Expired on ${d(a.to)}`}</div>
+    ${firstUncovered ? `<p class="note"><b>Renew it before ${DD(firstUncovered.start)}</b> (${esc(firstUncovered.title)}). Trips without coverage are marked below.</p>` : `<p class="note">All your upcoming trips are covered.</p>`}
+    <p class="note">N° ${esc(a.number)} · ${a.phones.map(([k, v]) => `${esc(k)}: <a href="tel:${esc(v.replace(/[^+\d]/g, ""))}">${esc(v)}</a>`).join(" · ")}</p>
+    <p class="note muted">From: ${esc(a.source)}</p></section>`;
+}
+// Step-by-step directions for an arrival where she travels on her own (segment.soloGuide)
+function soloGuide(s) {
+  const g = s.soloGuide; if (!CHECKIN_HELP || !g || g.for !== state.person) return "";
+  return `<div class="sologuide"><div class="eyebrow">🧭 ${esc(g.title)}</div><ol>${g.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>`;
+}
 function renderTrips(past) {
   const t0 = Date.now();
   const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
   if (past) list.reverse();
   if (!list.length) return `<div class="empty">${past ? "No past trips yet. Trips move here after they end." : "No upcoming trips."}</div>`;
-  let html = "", lastMonth = "";
+  let html = past ? "" : assistCard(), lastMonth = "";
   list.forEach((t, i) => {
     const p = parts(ms(t.start), offMin(t.start)), mk = `${MO[p.mo]} ${p.y}`;
     if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
@@ -1014,7 +1039,7 @@ function renderTrips(past) {
       ${workRibbon(t)}${tripPhoto(t)}
       <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
-      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentative</span>` : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
+      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentative</span>` : ""}${CHECKIN_HELP && state.extras?.assistCard && !past ? (assistCovers(t) ? `<span class="chip ins-ok">🛡️ Covered</span>` : `<span class="chip ins-no">🛡️ Not covered</span>`) : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
       </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segOrDone).join("")}</div></details>`;
@@ -1197,6 +1222,7 @@ function apply(data) {
   state.local = (data.local || []).sort((a, b) => ms(a.start) - ms(b.start));
   state.family = (data.family || []).sort((a, b) => ms(a.start) - ms(b.start));
   state.familyLabel = data.familyLabel || "Family trips";
+  state.extras = data.extras || {};
   state.loaded = true; state.locked = false;
   document.getElementById("lock").hidden = false;
 }
