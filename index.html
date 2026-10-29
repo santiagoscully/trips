@@ -590,6 +590,7 @@ const LAYOUTS = {
   "Boeing 777-200": { groups: ["ABC", "DEFG", "JKL"], rows: 52 },
   "Boeing 737 MAX 9": { groups: ["ABC", "DEF"], rows: 39 },
   "Boeing 737": { groups: ["ABC", "DEF"], rows: 30 },
+  "Boeing 737-800": { groups: ["ABC", "DEF"], rows: 30 },
 };
 function seatInfo(seat, aircraft) {
   const m = /^(\d+)([A-L])$/.exec((seat || "").trim()); if (!m) return null;

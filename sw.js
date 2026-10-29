@@ -1,5 +1,5 @@
 // Offline support: app shell from cache; trip data network-first with cached fallback.
-const CACHE = "trip-board-v39";
+const CACHE = "trip-board-v40";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-180.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
