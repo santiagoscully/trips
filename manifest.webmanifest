@@ -1,8 +1,8 @@
 {
   "name": "Trip Board",
   "short_name": "Trips",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "./index.html",
+  "scope": "./index.html",
   "display": "standalone",
   "background_color": "#F1F4F1",
   "theme_color": "#16202A",
@@ -29,7 +29,7 @@
       "name": "Check in",
       "short_name": "Check in",
       "description": "Check in for your next flight or hotel",
-      "url": "./#checkin",
+      "url": "./index.html#checkin",
       "icons": [
         {
           "src": "icons/sc-checkin.png",
@@ -42,7 +42,7 @@
       "name": "Now",
       "short_name": "Now",
       "description": "What to do right now on your trip",
-      "url": "./#now",
+      "url": "./index.html#now",
       "icons": [
         {
           "src": "icons/sc-now.png",
@@ -54,7 +54,7 @@
     {
       "name": "Upcoming trips",
       "short_name": "Upcoming",
-      "url": "./#trips",
+      "url": "./index.html#trips",
       "icons": [
         {
           "src": "icons/sc-trips.png",
@@ -63,5 +63,6 @@
         }
       ]
     }
-  ]
+  ],
+  "id": "./"
 }
