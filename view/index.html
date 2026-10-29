@@ -211,6 +211,7 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .work-bar img{width:18px;height:18px}
 .chip.tentative{background:#FFF4E0;color:#B26A00;font-weight:700;border:1px dashed #E0A040}
 .chip.work-chip{background:#E8F0FE;color:#1A73E8;font-weight:700}
+.ckhelp{display:grid;gap:6px;border:2px solid var(--sky, #1E6FD9);border-radius:12px;padding:10px 12px;background:var(--surface)}
 .myseat{display:grid;gap:6px;background:var(--surface-2);border-radius:12px;padding:10px 12px}
 .seatmap{width:100%;max-width:360px;height:auto}
 .wc{font:700 13px/1.3 var(--body);padding:6px 10px;border-radius:8px;justify-self:start}
@@ -300,6 +301,8 @@ const driveMin = code => HOME?.airports?.[code];
 const VIEW_ONLY = true;
 // Alicia's copy (site/alicia/): adds a tab summarizing Dani's trips (flights, hotels, dates, who), no booking details.
 const FAMILY_TAB = false;
+// Alicia's copy: a self check-in helper (button + code + last name) on flights where she travels alone.
+const CHECKIN_HELP = false;
 const state = { trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
 
 try { const v = localStorage.getItem("tbv-view"); if (v) state.view = v; } catch (e) {}
@@ -628,6 +631,19 @@ function myFlightInfo(f) {
     ${si ? seatMap(si) : ""}
     ${p.baggage ? `<div class="note">🧳 ${esc(p.baggage)}</div>` : ""}${wc}</div>`;
 }
+function ckHelper(f) {
+  if (!CHECKIN_HELP) return "";
+  const pax = (f.travelers || []).filter(t => typeof t === "object");
+  if (pax.length !== 1 || pax[0].name !== state.person) return "";       // only when she flies alone
+  const p = pax[0], code = p.booking || f.confirmation, url = f.checkinUrl || f.airline.checkin, t0 = Date.now();
+  const opens = ms(f.start) - (f.airline.checkinHours || 24) * H, closes = ms(f.start) - 45 * M;
+  if (t0 > ms(f.start)) return "";
+  const status = t0 < opens ? `Check-in opens <b>${DT(isoAt(opens, f.start))}</b> (24 hours before the flight).` : t0 < closes ? `<b>Check-in is open now.</b>` : `Online check-in may be closed; go to the ${esc(f.airline.name)} counter.`;
+  return `<div class="ckhelp"><div class="eyebrow">Check in yourself</div><p class="note">${status}</p>
+    <dl class="kv">${codeRow("Reservation code", code)}${p.lastName ? codeRow("Last name", p.lastName) : ""}${p.firstName ? row("First name", esc(p.firstName)) : ""}</dl>
+    <p class="note">Tap <b>Check in</b>, enter the reservation code and last name exactly as shown, then follow the steps to get your boarding pass.</p>
+    <div class="btns">${link(url, `Check in on ${f.airline.name}`, t0 >= opens)}</div></div>`;
+}
 function flightTopCard(f) {
   const t0 = now(), landed = t0 >= ms(f.end), flying = t0 >= ms(f.start) && !landed;
   const dm = driveMin(f.from), lead = f.international ? 3 : 2;
@@ -637,7 +653,7 @@ function flightTopCard(f) {
     <div class="eyebrow">${landed ? "Just landed" : flying ? "In the air" : "Your flight"}</div>
     <div class="ft-head">${icon(f)}${logo(brandOf(f))}<b>${esc(f.airline.name)} ${esc(f.flightNumber)}</b><span class="muted">${esc(f.from)} → ${esc(f.to)}</span>${isCheckedIn(f) ? `<span class="ck-done mini">✓ Checked in</span>` : ""}</div>
     <dl class="kv">${row("Departs", `${DT(f.start)} · ${esc(apName(f.from))}${termGate(f.departure) ? ` · ${esc(termGate(f.departure))}` : ""}`)}${row("Arrives", `${arrives(f)}${termGate(f.arrival) ? ` · ${esc(termGate(f.arrival))}` : ""}`)}${row(seatList(f).includes(",") ? "Seats" : "Seat", seatList(f))}${row("Bags", f.baggage ? esc(f.baggage) : "")}${(flying || landed) ? row("Baggage claim", `${f.arrival?.carousel ? `<b>Carousel ${esc(f.arrival.carousel)}</b> · ` : ""}${esc(f.arrival?.bags || "")}`) : ""}${codeRow("Confirmation", f.confirmation)}</dl>
-    ${myFlightInfo(f)}${leave}
+    ${ckHelper(f)}${myFlightInfo(f)}${leave}
     <div class="btns">${link(f.airline.manage, "Manage reservation", true)}${link(status(f), "Flightradar24")}${ckOpen && !isCheckedIn(f) ? ckLink(f, f.airline.checkin, "Check in") + ckToggle(f) : ""}</div>
   </section>`;
 }
@@ -887,7 +903,7 @@ function segBlock(s) {
       <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
-      <div class="stub">${myFlightInfo(s)}<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
+      <div class="stub">${ckHelper(s)}${myFlightInfo(s)}<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
       <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
