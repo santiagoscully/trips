@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alicia's trips</title>
+<meta name="theme-color" content="#10284A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="icon" href="../icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trips">
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,500..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#EDF2F9; --surface:#FFFFFF; --surface-2:#F2F6FC; --ink:#0F1B2D; --muted:#5A6A82; --line:#DCE4EF;
+  --accent:#2E5BEA; --accent-ink:#FFFFFF; --accent-soft:#E5ECFF;
+  --now:#E0571B; --now-soft:#FFEDE3; --good:#0B8F7D; --good-soft:#DBF3EE; --bad:#D63864; --bad-soft:#FCE4EC;
+  --sky:#10284A; --sky-2:#1B3D6E; --on-sky:#FFFFFF; --on-sky-muted:rgba(255,255,255,.72);
+  --shadow:0 1px 2px rgba(15,27,45,.05),0 8px 24px rgba(30,60,120,.08);
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0A1220; --surface:#121C2E; --surface-2:#18243A; --ink:#E7EDF7; --muted:#97A6BD; --line:#26344C;
+    --accent:#7C9CFF; --accent-ink:#0A1220; --accent-soft:#1C2A4D;
+    --now:#FF9A62; --now-soft:#3A2216; --good:#4FD1B8; --good-soft:#123A33; --bad:#FF7FA0; --bad-soft:#3D1826;
+    --sky:#0C1B33; --sky-2:#16305A; --on-sky:#FFFFFF; --on-sky-muted:rgba(255,255,255,.7);
+    --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0A1220; --surface:#121C2E; --surface-2:#18243A; --ink:#E7EDF7; --muted:#97A6BD; --line:#26344C;
+  --accent:#7C9CFF; --accent-ink:#0A1220; --accent-soft:#1C2A4D;
+  --now:#FF9A62; --now-soft:#3A2216; --good:#4FD1B8; --good-soft:#123A33; --bad:#FF7FA0; --bad-soft:#3D1826;
+  --sky:#0C1B33; --sky-2:#16305A; --on-sky:#FFFFFF; --on-sky-muted:rgba(255,255,255,.7);
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;padding-inline:max(14px,env(safe-area-inset-left,0px));padding-block:0 48px}
+.wrap{max-width:760px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:16px 10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-stretch:85%;font-weight:800;font-size:28px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.clock{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.tabs{display:flex;gap:6px;margin-top:12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none}
+.run{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:8px}
+.run-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.run-head b{font-size:15px}.run-head span{font-size:12px;color:var(--muted)}
+.run ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.run li{display:flex;gap:8px;align-items:flex-start;font-size:14px}
+.ch{flex:none;font:700 11px/1 var(--body);text-transform:uppercase;letter-spacing:.04em;padding:4px 6px;border-radius:6px}
+.ch-added{background:var(--good-soft);color:var(--good)}.ch-changed{background:var(--now-soft);color:var(--now)}
+.ch-removed{background:var(--bad-soft);color:var(--bad)}.ch-note{background:var(--surface-2);color:var(--muted)}
+.run .trip-name{color:var(--muted);font-size:12px}
+.banner a{color:inherit;font-weight:700}
+.who{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--muted);flex-wrap:wrap}
+.who select{font:700 15px/1.2 var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
+.who select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pax div.me b::after{content:" · " attr(data-me);color:var(--accent);font-weight:700}
+.tab{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:700 14px/1 var(--body);padding:10px 16px;border-radius:999px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab:focus-visible,.btn:focus-visible,.copy:focus-visible,summary:focus-visible,.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+main{display:grid;gap:20px;padding-top:20px}
+.banner{display:grid;gap:6px;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:14px;color:var(--muted)}
+.banner.alert{background:var(--bad-soft);color:var(--ink);border:1px solid var(--bad)}
+.banner strong{color:var(--ink)}
+.eyebrow{font:700 12px/1.2 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hero{background:var(--surface);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--line)}
+.hero-head{padding:18px 20px 16px;background:var(--now-soft);border-bottom:1px solid var(--line);display:grid;gap:6px}
+.hero-head .eyebrow{color:var(--now)}
+.hero-head.calm{background:var(--surface-2)}
+.hero-head.calm .eyebrow{color:var(--muted)}
+.hero h2{font-family:var(--display);font-stretch:90%;font-weight:800;font-size:clamp(24px,5vw,32px);line-height:1.1;margin:0;text-wrap:balance}
+.hero .sub{color:var(--muted);margin:0}
+.hero-body{padding:16px 20px 20px;display:grid;gap:14px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font:700 15px/1 var(--body);padding:12px 16px;border-radius:10px;border:1px solid var(--line);color:var(--ink);background:var(--surface)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:hover{filter:brightness(.97)}
+.quick{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.quick .btn.mini{margin-top:0}
+.btn.mini{padding:7px 10px;font-size:13px;margin-top:6px;color:var(--accent);border-color:var(--accent)}
+.kv{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:6px 14px;margin:0}
+.kv dt{color:var(--muted);font-size:14px}
+.kv dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+.code{font-family:var(--mono);font-weight:700;letter-spacing:.04em}
+.copy{appearance:none;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font:700 12px/1 var(--body);padding:5px 8px;border-radius:6px;margin-left:8px;cursor:pointer;vertical-align:1px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.steps li{padding:12px 14px;border-radius:10px;background:var(--surface-2)}
+.steps li b{display:block}
+.note{font-size:14px;color:var(--muted);margin:0}
+.flag{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--now-soft);font-size:14px}
+.flag.ok{background:var(--good-soft)}
+.flag::before{content:"!";flex:none;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--now);color:var(--surface);font:800 13px/1 var(--display)}
+.flag.ok::before{content:"✓";background:var(--good)}
+.section-title{font-family:var(--display);font-stretch:90%;font-weight:800;font-size:20px;margin:6px 0 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;gap:12px}
+.card h3{font-family:var(--display);font-stretch:92%;font-weight:700;font-size:19px;margin:0;text-wrap:balance}
+.next{list-style:none;margin:0;padding:0;display:grid}
+.next li{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.next li:first-child{border-top:0}
+.when{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+/* trips list */
+.month{font:700 13px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 -8px}
+.trip{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.trip>summary{list-style:none;cursor:pointer;padding:16px 18px;display:grid;gap:6px}
+.trip>summary::-webkit-details-marker{display:none}
+.chev{font-size:26px;line-height:1;color:var(--muted);transition:transform .15s}
+.trip[open] .chev{transform:rotate(90deg)}
+.trip-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.trip h3{font-family:var(--display);font-stretch:90%;font-weight:800;font-size:22px;margin:0;text-wrap:balance}
+.dates{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:0}
+.chip.fam{background:var(--accent-soft);color:var(--accent)}
+.chip.soon{background:var(--now-soft);color:var(--now)}
+.about summary{cursor:pointer;color:var(--muted);font-size:13px}
+.footlinks{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.footlink{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 13px/1 var(--body);padding:9px 14px;border-radius:999px;cursor:pointer}
+.footlink[aria-current="page"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.view-title{font:800 20px/1.2 var(--display, var(--body));margin:4px 0 2px}
+.about p{font-size:13px;color:var(--muted);margin:6px 0}
+.ckrow{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line)}
+.eyebrow + .ckrow{border-top:0}
+.ckrow .btn{justify-self:start}
+.ends{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ends b{font-family:var(--body);color:var(--ink);margin-right:4px}
+.trip-body{padding:0 18px 18px;display:grid;gap:12px}
+.seg{border:1px solid var(--line);border-radius:12px;background:var(--surface);display:grid}
+.seg-main{padding:14px 16px;display:grid;gap:8px}
+.ic{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;margin-right:7px;vertical-align:-6px;background:var(--accent-soft);color:var(--accent)}
+.ic svg{width:15px;height:15px;fill:currentColor}
+.ic-lodging,.ic-home{background:var(--good-soft);color:var(--good)}
+.ic-car,.ic-transfer,.ic-ride{background:var(--now-soft);color:var(--now)}
+.ic-activity{background:var(--surface-2);color:var(--muted)}
+.ic-restaurant{background:#FDECEA;color:#C0392B}.ic-movie{background:#EDE7F6;color:#5E35B1}.ic-show{background:#FFF4E0;color:#B26A00}.ic-event{background:#E3F2FD;color:#1565C0}
+.logo{width:18px;height:18px;border-radius:4px;vertical-align:-4px;margin-right:6px;background:#fff;object-fit:contain}
+.seg.branded{border-left:5px solid var(--brand, var(--line))}
+.ckrow{border-left:4px solid var(--brand, transparent);padding-left:10px}
+.seg.ride{border-style:dashed;background:transparent}
+.seg-type{font:700 11px/1 var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.seg h4{margin:0;font-family:var(--display);font-stretch:95%;font-weight:700;font-size:17px}
+.route{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:10px}
+.route .ap{font-family:var(--display);font-stretch:110%;font-weight:800;font-size:34px;line-height:1;letter-spacing:.02em}
+.route .t{font-family:var(--mono);font-size:13px;color:var(--muted);margin-top:4px}
+.route .mid{color:var(--muted);font-size:13px;text-align:center;padding-bottom:16px}
+.route .r{text-align:right}
+.route .tz{font-family:var(--body);font-size:12px}
+.route .t b{color:var(--ink)}
+.stub{border-top:2px dashed var(--line);padding:12px 16px;display:grid;gap:10px;background:var(--surface-2);border-radius:0 0 12px 12px;position:relative}
+.stub::before,.stub::after{content:"";position:absolute;top:-9px;width:16px;height:16px;border-radius:50%;background:var(--surface);border:1px solid var(--line)}
+.stub::before{left:-9px}.stub::after{right:-9px}
+.pax{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pax div{font-size:14px}
+.pax .code{font-size:13px;color:var(--muted);display:block}
+.empty{padding:28px 20px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:14px}
+.preview{display:grid;gap:8px;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;font-size:14px}
+.preview .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.preview .chip{cursor:pointer}
+.preview .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.preview input{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+footer{color:var(--muted);font-size:13px;padding-top:12px}
+/* ---------- colour refresh ---------- */
+header.top{background:linear-gradient(180deg,var(--sky),var(--sky-2));color:var(--on-sky);border-bottom:0;box-shadow:0 0 0 100vmax var(--sky);clip-path:inset(0 -100vmax);padding-block:14px 14px}
+header.top h1{color:var(--on-sky)}
+header.top .clock,.who{color:var(--on-sky-muted)}
+.who select{background:rgba(255,255,255,.12);color:var(--on-sky);border-color:rgba(255,255,255,.25)}
+.who select option{color:#0F1B2D}
+.tab{background:rgba(255,255,255,.1);color:var(--on-sky);border-color:rgba(255,255,255,.22)}
+.tab[aria-selected="true"]{background:#fff;color:var(--sky);border-color:#fff}
+.hero,.card,.trip,.seg{border-radius:18px;box-shadow:var(--shadow);border-color:transparent}
+.seg{box-shadow:none;border:1px solid var(--line)}
+.hero-head{background:linear-gradient(135deg,var(--now-soft),var(--surface));border-bottom:0}
+.hero-head.calm{background:linear-gradient(135deg,var(--accent-soft),var(--surface))}
+.hero-head.calm .eyebrow{color:var(--accent)}
+.eyebrow{color:var(--accent)}
+.month{color:var(--accent);display:flex;align-items:center;gap:10px}
+.month::after{content:"";flex:1;height:1px;background:var(--line)}
+.trip{border-top:6px solid var(--tc, var(--accent))}
+.trip-photo{aspect-ratio:3/1;height:auto;margin:-16px -18px 6px;background:var(--accent-soft) center/100% 100% no-repeat;position:relative}
+.trip-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(10,18,32,.25))}
+.seg{overflow:hidden}
+.flight-top{border-left:5px solid var(--brand, var(--sky))}
+.ft-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px}
+.ck-done.mini{padding:5px 8px;font-size:11px}
+.ck-done{display:inline-flex;align-items:center;font:700 13px/1 var(--body);padding:9px 12px;border-radius:999px;background:var(--good-soft);color:var(--good)}
+.note.cancel{background:var(--surface-2);border-radius:10px;padding:8px 10px;margin:6px 0}
+.trip.work,.hero.work{position:relative}
+/* work trips: a full-width bar over the top of the photo */
+.work-bar{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;justify-content:center;gap:8px;
+  height:34px;background:rgba(255,255,255,.96);color:#1A73E8;font:800 13px/1 var(--body);letter-spacing:.16em;
+  border-bottom:4px solid;border-image:linear-gradient(90deg,#4285F4 0 25%,#EA4335 25% 50%,#FBBC05 50% 75%,#34A853 75%) 1;pointer-events:none}
+.work-bar span{color:#9AA0A6}.work-bar .org{color:#202124}
+.work-bar img{width:18px;height:18px}
+.chip.tentative{background:#FFF4E0;color:#B26A00;font-weight:700;border:1px dashed #E0A040}
+.chip.work-chip{background:#E8F0FE;color:#1A73E8;font-weight:700}
+.seg-done{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);opacity:.75}
+.seg-done[open]{opacity:1;background:transparent;border-style:solid}
+.seg-done>summary{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;list-style:none;font-size:13px;color:var(--muted)}
+.seg-done>summary::-webkit-details-marker{display:none}
+.seg-done .done-chip{flex:none;font:700 11px/1 var(--body);padding:4px 7px;border-radius:6px;background:var(--good-soft);color:var(--good)}
+.seg-done .done-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:line-through;text-decoration-color:rgba(0,0,0,.25)}
+.seg-done .done-when{flex:none;font-size:12px}
+.seg-done .ic{transform:scale(.85)}
+.seg-done[open]>.seg{margin:0 6px 6px}
+.seg-photo{aspect-ratio:3/1;height:auto;background:var(--accent-soft) center/100% 100% no-repeat}
+img.seg-photo{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--accent-soft)}
+.card>.seg-photo{margin:-16px -18px 0;border-radius:18px 18px 0 0}
+@media (max-width:480px){img.seg-photo{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--accent-soft)}
+.card>.seg-photo{margin:-14px -14px 0}}
+.hero-photo{aspect-ratio:3/1;height:auto;background:var(--accent-soft) center/100% 100% no-repeat}
+@media (max-width:480px){.trip-photo{margin:-14px -14px 6px}}
+.trip h3{color:var(--ink)}
+.chip{background:var(--accent-soft);color:var(--accent)}
+.chip.fam{background:var(--good-soft);color:var(--good)}
+.route{background:var(--accent-soft);border-radius:12px;padding:10px 12px}
+.route .ap{color:var(--accent)}
+.route .mid{color:var(--accent)}
+.stub{background:var(--surface-2)}
+.steps li{background:var(--surface-2);border-left:3px solid var(--accent)}
+.btn.primary{background:linear-gradient(180deg,#3D6BF5,var(--accent));box-shadow:0 2px 6px rgba(46,91,234,.3)}
+.ckrow .btn.primary{box-shadow:none}
+.next li .when{color:var(--accent)}
+.banner.alert{border:0;background:var(--bad-soft)}
+footer .about summary{color:var(--muted)}
+@media (max-width:480px){
+  .route .ap{font-size:28px}
+  .kv{grid-template-columns:1fr;gap:2px 0}.kv dt{margin-top:8px;font-size:13px}
+  .next li{grid-template-columns:1fr;gap:2px}
+  h1{font-size:24px}
+  .trip>summary{padding:14px}
+  .trip-body{padding:0 12px 14px}
+  .trip h3{font-size:21px}
+  .seg-main{padding:12px}
+  .stub{padding:12px}
+  .card{padding:14px}
+  .hero-head{padding:16px}
+  .hero-body{padding:14px 16px 16px}
+  .btn{padding:11px 14px}
+  .ends{font-size:14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Trip Board</h1>
+      <span class="clock" id="clock"></span>
+    </div>
+    <div class="who"><label for="person">Showing trips for</label><select id="person"></select></div>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" id="tab-now" data-view="now" aria-selected="true">Now</button>
+      <button class="tab" role="tab" id="tab-trips" data-view="trips" aria-selected="false">Upcoming</button>
+      <button class="tab" role="tab" id="tab-local" data-view="local" aria-selected="false">Local</button>
+      <button class="tab" role="tab" id="tab-family" data-view="family" aria-selected="false" hidden>Dani's trips</button>
+    </nav>
+  </header>
+  <main id="app"><div class="empty">Loading trips…</div></main>
+  <footer id="foot"><nav class="footlinks" aria-label="More">
+    <button class="footlink" data-view="past">Past trips</button>
+    <button class="footlink" data-view="changes" id="changes-link">Change history</button></nav>
+    <details class="about"><summary>About</summary>
+    <p>Details come from booking emails. Flights and email are checked weekly, and every day from 2 days before a trip until it ends. <span id="about-checked"></span></p>
+    <p id="photo-credits"></p>
+    <button class="copy" id="lock" hidden>Forget passphrase on this device</button></details></footer>
+</div>
+
+<script>
+(() => {
+const H = 3600e3, M = 60e3, D = 24 * H;
+const AIRPORTS = {SJC:"San José",DEN:"Denver",SFO:"San Francisco",HNL:"Honolulu",TPA:"Tampa",LAS:"Las Vegas",ZRH:"Zurich",BCN:"Barcelona",LIN:"Milan Linate",PTY:"Panama City",COR:"Córdoba"};
+let MAIN = "";
+let HOME = null; // {address, airports: {SJC: minutes, ...}}
+const driveMin = code => HOME?.airports?.[code];
+// View-only copy (site/view/, built by publish.py): no codes, prices or manage/check-in actions.
+const VIEW_ONLY = false;
+// Alicia's copy (site/alicia/): adds a tab summarizing Dani's trips (flights, hotels, dates, who), no booking details.
+const FAMILY_TAB = true;
+const state = { trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
+
+try { const v = localStorage.getItem("tba-view"); if (v) state.view = v; } catch (e) {}
+
+// ---------- people: anyone named on a booking in the trips ----------
+const isPerson = n => typeof n === "string" && n.trim() && !/\d/.test(n);
+function peopleOf(trip) {
+  const names = new Set();
+  [...(trip.travelers || []), ...(trip.companions || [])].forEach(n => isPerson(n) && names.add(n));
+  trip.segments.forEach(s => (s.travelers || []).forEach(p => { const n = typeof p === "string" ? p : p.name; if (isPerson(n)) names.add(n); }));
+  return names;
+}
+// A trip belongs to a person if they're on any reservation in it; the whole trip
+// (including bookings under other names) is then shown to them.
+const tripsFor = p => state.trips.filter(t => peopleOf(t).has(p));
+function allPeople() {
+  const all = new Set();
+  state.trips.forEach(t => peopleOf(t).forEach(n => all.add(n)));
+  const rest = [...all].filter(n => n !== MAIN).sort();
+  return [MAIN, ...rest];
+}
+const h = (location.hash || "").slice(1); if (["now","trips","past","checkin"].includes(h)) state.view = h;
+
+// ---------- time helpers: every ISO string carries its own local offset ----------
+const ms = iso => Date.parse(iso);
+const offMin = iso => { const m = /([+-])(\d\d):(\d\d)$/.exec(iso); return m ? (m[1] === "-" ? -1 : 1) * (+m[2] * 60 + +m[3]) : 0; };
+function parts(t, off) { const d = new Date(t + off * M); return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), wd: d.getUTCDay(), hh: d.getUTCHours(), mi: d.getUTCMinutes() }; }
+const WD = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const tStr = p => `${(p.hh % 12) || 12}:${String(p.mi).padStart(2, "0")} ${p.hh < 12 ? "AM" : "PM"}`;
+const dStr = p => `${WD[p.wd]}, ${MO[p.mo]} ${p.d}`;
+// format an instant in the time zone of a reference ISO string
+const timeAt = (t, ref) => tStr(parts(t, offMin(ref)));
+const dateAt = (t, ref) => dStr(parts(t, offMin(ref)));
+const when = (t, ref) => `${dateAt(t, ref)}, ${timeAt(t, ref)}`;
+const T = iso => timeAt(ms(iso), iso), DT = iso => when(ms(iso), iso), DD = iso => dateAt(ms(iso), iso);
+function rangeStr(a, b) {
+  const pa = parts(ms(a), offMin(a)), pb = parts(ms(b), offMin(b));
+  if (pa.y === pb.y && pa.mo === pb.mo && pa.d === pb.d) return `${MO[pa.mo]} ${pa.d}, ${pa.y}`;
+  if (pa.y === pb.y) return `${MO[pa.mo]} ${pa.d} – ${MO[pb.mo]} ${pb.d}, ${pb.y}`;
+  return `${MO[pa.mo]} ${pa.d}, ${pa.y} – ${MO[pb.mo]} ${pb.d}, ${pb.y}`;
+}
+function rel(dt) {
+  const a = Math.abs(dt), s = dt >= 0 ? "in " : "", e = dt < 0 ? " ago" : "";
+  if (a < 90 * M) return `${s}${Math.max(1, Math.round(a / M))} min${e}`;
+  if (a < 36 * H) return `${s}${Math.round(a / H)} h${e}`;
+  return `${s}${Math.round(a / D)} days${e}`;
+}
+const now = () => state.override ?? Date.now();
+
+// ---------- small render helpers ----------
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const first = n => esc(String(n).split(" ")[0]);
+// Open the airline/hotel/car app instead of its website when it's installed.
+// Android: Chrome only opens apps through their browsable link handlers, so we hand the same https
+// link to the app's package (package names from each site's assetlinks.json / Play Store). If the app
+// can't take that link (or isn't installed), Chrome opens the website instead. iPhone: plain https links already
+// hand off to apps that claim them (United, Hilton...), so they stay as they are.
+const APPS = [
+  [/(^|\.)united\.com$/, "com.united.mobile.android"],
+  [/(^|\.)(hgvc|hiltongrandvacations)\.com$/, "com.hilton.grandvacations"],
+  // Hilton Honors: tested 2026-10-17, the app accepts none of hilton.com's links, so Hilton buttons open the website.
+  [/(^|\.)avis\.com$/, "com.avis.androidapp"],
+  [/(^|\.)southwest\.com$/, "com.southwestairlines.mobile"],
+  [/(^|\.)delta\.com$/, "com.delta.mobile.android"],
+  [/(^|\.)swiss\.com$/, "com.yoc.swiss.swiss"],
+  [/(^|\.)copaair\.com$/, "com.mttnow.android.copa.production"],
+  [/(^|\.)easyjet\.com$/, "com.mttnow.droid.easyjet"],
+  [/(^|\.)expedia\.com$/, "com.expedia.bookings"],
+  [/(^|\.)europcar\.com$/, "com.clanmo.europcar"],
+  [/(^|\.)hyatt\.com$/, "com.Hyatt.hyt"],
+  [/(^|\.)marriott\.com$/, "com.marriott.mrt"],
+  [/(^|\.)ihg\.com$/, "com.ihg.apps.android"],
+  [/(^|\.)flightradar24\.com$/, "com.flightradar24free"],
+];
+const ANDROID = /Android/i.test(navigator.userAgent);
+// Some apps only accept certain links. On Android, swap a link the app ignores for one it opens
+// (the app's own screen has the same action): United opens My Trips, where check-in is one tap.
+const APP_LINK_SWAPS = [
+  [/(^|\.)united\.com$/, /^\/[a-z]{2}\/[a-z]{2}\/checkin/i, "/en/us/manageres/mytrips"],
+];
+const appHref = u => {
+  if (!ANDROID || !u) return u;
+  let url; try { url = new URL(u); } catch (_) { return u; }
+  const back = `S.browser_fallback_url=${encodeURIComponent(u)};end`;
+  // Google Maps understands these links itself, so open the exact place/route in it
+  if (/(^|\.)google\.com$/.test(url.hostname) && url.pathname.startsWith("/maps"))
+    return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=com.google.android.apps.maps;${back}`;
+  const app = APPS.find(([re]) => re.test(url.hostname));
+  if (!app) return u;
+  const swap = APP_LINK_SWAPS.find(([host, path]) => host.test(url.hostname) && path.test(url.pathname));
+  if (swap) { url.pathname = swap[2]; url.search = ""; }
+  // If the app doesn't accept this exact link (apps only take some paths, e.g. Hilton's account page),
+  // Chrome opens the same page on the website instead, where check-in always works.
+  return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${app[1]};${back}`;
+};
+const hrefAttrs = u => { const h = appHref(u); return h === u ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(h)}"`; };
+const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" ${hrefAttrs(href)}>${esc(label)} ↗</a>` : "";
+const copyBtn = v => `<button class="copy" data-copy="${esc(v)}">Copy</button>`;
+const codeRow = (label, v) => v ? `<dt>${esc(label)}</dt><dd><span class="code">${esc(v)}</span>${copyBtn(v)}</dd>` : "";
+const row = (label, v) => v ? `<dt>${esc(label)}</dt><dd>${v}</dd>` : "";
+// The one link that takes you straight to checking in for a flight or hotel
+const checkinLink = s => s.type === "flight" ? s.airline?.checkin : s.onlineCheckin?.url;
+// Hotel check-in stays offered until midnight (hotel's local time) at the end of the check-in day, in case you arrive late.
+const ckUntil = s => s.type === "flight" ? ms(s.start) : Date.parse(`${s.start.slice(0, 10)}T23:59:59${s.start.slice(19)}`);
+const hotelCk = s => s.onlineCheckin && !isCheckedIn(s) && Date.now() < ckUntil(s);
+// Check-in buttons carry data-ck=<segment>; after each render only the first (top) one per segment stays.
+const ckKey = s => `${s.id}|${s.start}`;
+const ckTag = (s, html) => html.replace("<a ", `<a data-ck="${esc(ckKey(s))}" `);
+const ckLink = (s, href, label, primary) => ckTag(s, link(href, label, primary));
+// Checked in: set in the data (`checkedIn: true`, shared with everyone) or tapped on this device (kept in this browser).
+const ckLocal = () => { try { return JSON.parse(localStorage.getItem("tba-checkedin") || "[]"); } catch (_) { return []; } };
+const isCheckedIn = s => s.checkedIn === true || ckLocal().includes(ckKey(s));
+const ckToggle = s => VIEW_ONLY ? "" : s.checkedIn === true ? `<span class="ck-done">✓ Checked in</span>`
+  : isCheckedIn(s) ? `<span class="ck-done">✓ Checked in</span><button class="copy" data-ck-undo="${esc(ckKey(s))}">Undo</button>`
+  : `<button class="btn" data-ck-mark="${esc(ckKey(s))}">I've checked in ✓</button>`;
+const quickBtn = s => { const u = checkinLink(s); return u ? ckTag(s, `<a class="btn mini" ${hrefAttrs(u)}>Check in ↗</a>`) : ""; };
+const maps = q => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+const directions = (o, d) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}`;
+// Live tracking on Flightradar24 (opens its app on Android when installed). Codeshares track the
+// operating flight (`trackAs`, e.g. United UA9725 is flown as SWISS LX39).
+const status = f => `https://www.flightradar24.com/data/flights/${encodeURIComponent((f.trackAs || f.flightNumber.split(" ")[0]).toLowerCase())}`;
+const apName = c => AIRPORTS[c] || c;
+// Map/directions target: the flight's terminal when we know it ("SJC airport Terminal A"), else the airport
+const apPlace = (code, term) => term && !/^main terminal/i.test(term) ? `${code} airport ${term.split(",")[0]}` : `${code} airport`;
+const depPlace = f => apPlace(f.from, f.departure?.terminal);
+const arrPlace = f => apPlace(f.to, f.arrival?.terminal);
+// "Terminal A · Gate 12" (empty when nothing is known yet)
+const termGate = o => [o?.terminal, o?.gate && `Gate ${o.gate}`].filter(Boolean).join(" · ");
+const city = f => apName(f.to);
+// "4:39 PM Denver time", plus the date when it lands on a different local day than it leaves
+const arrives = f => `${T(f.end)} ${esc(city(f))} time${DD(f.end) !== DD(f.start) ? ` (${DD(f.end)})` : ""}`;
+
+function paxList(list) {
+  if (!list || !list.length) return "";
+  return `<div class="pax">${list.map(p => `<div${p.name === state.person ? ` class="me" ` : ""}><b data-me="${p.name === MAIN ? "you" : "selected"}">${esc(p.name)}</b>${p.seat ? `<span class="code">Seat ${esc(p.seat)}</span>` : ""}${p.booking ? `<span class="code">Booking ${esc(p.booking)}</span>` : ""}</div>`).join("")}</div>`;
+}
+const notes = arr => (arr || []).map(n => `<p class="note">• ${esc(n)}</p>`).join("");
+
+// ---------- the "smart" part: turn segments into time-windowed actions ----------
+function actionsFor(trip) {
+  const segs = trip.segments, acts = [];
+  segs.forEach((s, i) => {
+    const st = ms(s.start), en = ms(s.end);
+    if (s.type === "flight") {
+      const lead = (s.international ? 3 : 2) * H;
+      const ck = st - (s.airline.checkinHours || 24) * H;
+      if (!VIEW_ONLY && !isCheckedIn(s)) acts.push({ k: "checkin", from: ck, to: st - lead - (driveMin(s.from) || 0) * M - 30 * M, s, p: 5 });
+      const drive = (driveMin(s.from) || 0) * M;
+      acts.push({ k: "airport", from: st - lead - drive - 30 * M, to: st, s, p: 6 });
+      acts.push({ k: "inair", from: st, to: en, s, p: 9 });
+      acts.push({ k: "bags", from: en, to: en + 40 * M, s, p: 8 });
+      const conn = segs[i + 1] && segs[i + 1].type === "flight" && ms(segs[i + 1].start) - en < 5 * H ? segs[i + 1] : null;
+      if (conn) acts.push({ k: "connect", from: en + 40 * M, to: ms(conn.start) - 60 * M, s, conn, p: 7 });
+      else {
+        const targets = segs.slice(i + 1).filter(x => x.type !== "flight" && x.type !== "activity" && ms(x.start) < en + 8 * H && ms(x.end) > en);
+        const lodging = segs.find(x => x.type === "lodging" && ms(x.start) < en + 8 * H && ms(x.end) > en);
+        if (lodging && !targets.includes(lodging)) targets.push(lodging);
+        targets.sort((a, b) => (a.type === "lodging") - (b.type === "lodging"));
+        if (targets.length) acts.push({ k: "goto", from: en + 40 * M, to: en + 4 * H, s, targets, p: 7 });
+        else if (driveMin(s.to)) acts.push({ k: "gohome", from: en + 40 * M, to: en + 3 * H, s, p: 7 });
+      }
+    } else if (s.type === "lodging") {
+      acts.push({ k: "stay", from: st, to: en, s, p: 1 });
+      if (s.onlineCheckin && !isCheckedIn(s)) acts.push({ k: "hotelcheckin", from: st - (s.onlineCheckin.opensHours || 24) * H, to: ckUntil(s), s, p: 4 });
+      if (!s.home) acts.push({ k: "checkout", from: en - 4 * H, to: en, s, p: 4 });
+    } else if (s.type === "car" || s.type === "transfer") {
+      acts.push({ k: "pickup", from: st - 90 * M, to: st + 60 * M, s, p: 6 });
+      if (s.type === "car") acts.push({ k: "return", from: en - 3 * H, to: en, s, p: 4 });
+    } else if (s.type === "activity") {
+      acts.push({ k: "activity", from: st - 2 * H, to: Math.min(en, st + 4 * H), s, p: 3 });
+    }
+  });
+  return acts;
+}
+
+function actionCard(a, t) {
+  const s = a.s;
+  let eyebrow = "", title = "", sub = "", body = "";
+  if (a.k === "checkin") {
+    const opened = ms(s.start) - (s.airline.checkinHours || 24) * H;
+    eyebrow = "Check-in is open";
+    title = `Check in for ${esc(s.flightNumber)} to ${esc(city(s))}`;
+    sub = `Departs ${DT(s.start)} from ${esc(apName(s.from))} (${esc(s.from)}). Arrives ${arrives(s)}. Check-in opened ${when(opened, s.start)}.`;
+    body = `<div class="btns">${ckLink(s, s.airline.checkin, `Check in on ${s.airline.name}`, true)}${ckToggle(s)}${link(status(s), "Track on Flightradar24")}</div>
+      <dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
+  } else if (a.k === "airport") {
+    const lead = (s.international ? 3 : 2);
+    eyebrow = "Time to go";
+    const dm = driveMin(s.from);
+    const tg = termGate(s.departure);
+    title = (dm ? `Leave home by ${timeAt(ms(s.start) - lead * H - dm * M, s.start)} for ${esc(apName(s.from))} airport` : `Head to ${esc(apName(s.from))} airport`) + (s.departure?.terminal ? `, ${esc(s.departure.terminal.split(",")[0])}` : "");
+    sub = `${esc(s.flightNumber)} departs ${T(s.start)} and arrives ${arrives(s)}. Aim to be there ${lead} hours early${s.international ? " for an international flight" : ""}${dm ? `; the drive from ${esc(HOME.address)} is about ${dm} min` : ""}.${tg ? ` Departs from ${esc(tg)}.` : ""}${s.departure?.gate ? "" : " Gate not posted yet."}`;
+    const gm = t.ground?.mode, needRide = !dm && gm !== "family" && !hasGround(t.segments, ms(s.start) - 6 * H, ms(s.start));
+    body = `${needRide && !gm ? `<div class="flag">No rental car booked: take an Uber to the airport.</div>` : ""}${!dm && gm === "family" && t.ground.note ? `<p class="note">• ${esc(t.ground.note)}</p>` : ""}<div class="btns">${needRide ? link(uber(depPlace(s), apName(s.from) + " airport"), "Open Uber", true) : ""}${link(dm ? directions(HOME.address, depPlace(s)) : maps(depPlace(s)), dm ? "Directions from home" : "Map to airport", !needRide)}${ckLink(s, s.airline.checkin, "Boarding pass")}${link(status(s), "Flightradar24")}</div>
+      ${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}<dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>${paxList(s.travelers)}${notes(s.notes)}`;
+  } else if (a.k === "gohome") {
+    eyebrow = "Welcome back";
+    title = "Head home";
+    sub = `About ${driveMin(s.to)} min from ${esc(apName(s.to))} to ${esc(HOME.address)}.`;
+    body = `<ul class="steps"><li><b>Baggage claim</b>${esc(s.arrival?.bags || "Follow signs to baggage claim.")}</li></ul><div class="btns">${link(directions(arrPlace(s), HOME.address), "Directions home", true)}</div>`;
+  } else if (a.k === "inair") {
+    eyebrow = "In the air";
+    title = `${esc(s.flightNumber)} to ${esc(city(s))}`;
+    sub = `Lands ${arrives(s)}, ${rel(ms(s.end) - now())}.`;
+    body = `<div class="btns">${link(status(s), "Track on Flightradar24", true)}</div>${paxList(s.travelers)}`;
+  } else if (a.k === "bags") {
+    eyebrow = "You've landed";
+    title = `Welcome to ${esc(city(s))}. Pick up your bags`;
+    sub = `${esc(s.flightNumber)} landed ${T(s.end)}${termGate(s.arrival) ? ` at ${esc(termGate(s.arrival))}` : ""}.`;
+    body = `<ul class="steps"><li><b>Baggage claim</b>${esc(s.arrival?.bags || "Follow signs to baggage claim.")}</li>${(s.arrival?.ground || []).map(g => `<li>${esc(g)}</li>`).join("")}</ul>
+      <div class="btns">${link(status(s), "Track on Flightradar24", true)}</div>`;
+  } else if (a.k === "connect") {
+    eyebrow = "Connection";
+    title = `Make your connection to ${esc(a.conn.flightNumber)}`;
+    sub = `Departs ${T(a.conn.start)} to ${esc(apName(a.conn.to))}${termGate(a.conn.departure) ? ` from ${esc(termGate(a.conn.departure))}` : ""}. You have ${rel(ms(a.conn.start) - now()).replace("in ", "")} left.`;
+    body = `<ul class="steps"><li>${esc(s.arrival?.bags || "")}</li></ul>
+      <div class="btns">${ckLink(a.conn, a.conn.airline.checkin, `Check in on ${a.conn.airline.name}`, true)}${link(status(a.conn), "Flightradar24")}</div>
+      <dl class="kv">${codeRow("Confirmation", a.conn.confirmation)}</dl>${paxList(a.conn.travelers)}`;
+  } else if (a.k === "goto") {
+    const tgt = a.targets[0], lodging = a.targets.find(x => x.type === "lodging");
+    eyebrow = "Next step";
+    if (tgt.type === "lodging" && tgt.home) {
+      title = `Head to ${esc(tgt.title)}`;
+      sub = esc(tgt.address);
+    } else if (tgt.type === "lodging") {
+      title = `Get to ${esc(tgt.title)}`;
+      const early = now() < ms(tgt.start);
+      sub = early ? `You'll arrive early: check-in starts ${T(tgt.start)}. Ask the front desk to hold your bags.`
+                  : `Check-in has been open since ${T(tgt.start)}, so you can go straight to your room.`;
+    } else {
+      title = tgt.type === "transfer" ? `Meet your driver: ${esc(tgt.title)}` : `Pick up your car: ${esc(tgt.title)}`;
+      sub = `${tgt.type === "transfer" ? "Pickup" : "Pickup"} ${T(tgt.start)}${lodging ? `, then on to ${esc(lodging.title)}` : ""}.`;
+    }
+    const gm = t.ground?.mode, booked = a.targets.some(x => x.type === "car" || x.type === "transfer");
+    body = `<ul class="steps">${(s.arrival?.ground || []).map(g => `<li>${esc(g)}</li>`).join("")}</ul>
+      ${booked ? "" : gm === "family" ? (t.ground.note ? `<p class="note">• ${esc(t.ground.note)}</p>` : "") : gm === "uber" ? "" : `<div class="flag">No rental car or transfer booked. An Uber is the easiest way${tgt.home ? " (unless family is picking you up)" : ""}.</div>`}
+      <div class="btns">${booked || gm === "family" ? "" : link(uber((lodging || tgt).address, (lodging || tgt).title), "Open Uber", true)}${link(directions(arrPlace(s), (lodging || tgt).address || (lodging || tgt).title), "Directions", !!a.targets.some(x => x.type === "car" || x.type === "transfer"))}</div>
+      <dl class="kv">${a.targets.map(x => codeRow(x.title, x.confirmation)).join("")}</dl>
+      ${a.targets.flatMap(x => x.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}`;
+  } else if (a.k === "checkout") {
+    eyebrow = "Today";
+    title = `Check out of ${esc(s.title)} by ${T(s.end)}`;
+    sub = `${rel(ms(s.end) - now())}.`;
+    body = `<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Phone", esc(s.phone))}</dl>`;
+  } else if (a.k === "hotelcheckin") {
+    eyebrow = "Hotel check-in";
+    title = `Check in online for ${esc(s.title)}`;
+    sub = `Rooms are ready from ${DT(s.start)}. ${esc(s.onlineCheckin.note || "")}`;
+    body = `<div class="btns">${ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true)}${link(maps(s.address), "Map")}</div><dl class="kv">${codeRow("Confirmation", s.confirmation)}</dl>`;
+  } else if (a.k === "stay") {
+    eyebrow = "Where you are";
+    title = `Staying at ${esc(s.title)}`;
+    sub = s.home ? `Until ${DD(s.end)}.` : `Check-out ${DT(s.end)}.`;
+  } else if (a.k === "pickup") {
+    eyebrow = s.type === "transfer" ? "Transfer" : "Rental car";
+    title = esc(s.title);
+    sub = `${s.type === "transfer" ? "Pickup" : "Pick up"} ${DT(s.start)} at ${esc(s.address || "")}.`;
+    body = `<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Phone", esc(s.phone))}</dl>${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}<div class="btns">${link(s.link, "Manage booking")}</div>`;
+  } else if (a.k === "return") {
+    eyebrow = "Rental car";
+    title = `Return ${esc(s.title)}`;
+    sub = `Due ${DT(s.end)}.`;
+  } else if (a.k === "activity") {
+    eyebrow = "Plans";
+    title = esc(s.title);
+    sub = `${DT(s.start)}${s.address ? ` · ${esc(s.address)}` : ""}`;
+    body = `<div class="btns">${s.address ? link(maps(s.address), "Map", true) : ""}${link(s.link, "Website")}</div><dl class="kv">${codeRow("Booking", s.confirmation)}</dl>`;
+  }
+  return { eyebrow, title, sub, body };
+}
+
+// Pinned at the top of Now (Santiago: the flight info is what he needs most): the next flight that isn't done yet,
+// from before you leave until 3 h after it lands.
+// "20G, 20F, 20E" with the selected person's seat first; "Not assigned yet" when no seats are known
+const seatList = f => {
+  const pax = (f.travelers || []).map(t => typeof t === "string" ? { name: t } : t)
+    .sort((a, b) => (b.name === state.person) - (a.name === state.person));
+  if (!pax.some(p => p.seat)) return pax.length ? "Not assigned yet" : "";
+  return pax.filter(p => p.seat).map(p => p.name === state.person ? `<b>${esc(p.seat)}</b>` : esc(p.seat)).join(", ");  // seat numbers only; yours first, in bold
+};
+function flightTopCard(f) {
+  const t0 = now(), landed = t0 >= ms(f.end), flying = t0 >= ms(f.start) && !landed;
+  const dm = driveMin(f.from), lead = f.international ? 3 : 2;
+  const ckOpen = t0 >= ms(f.start) - (f.airline.checkinHours || 24) * H && t0 < ms(f.start);
+  const leave = dm && !flying && !landed ? `<div class="flag ok">Leave ${esc(HOME.address)} by ${timeAt(ms(f.start) - lead * H - dm * M, f.start)} on ${DD(f.start)} (${dm} min drive + ${lead} h at the airport).</div>` : "";
+  return `<section class="card flight-top"${brandStyle(f)} aria-label="Your flight">
+    <div class="eyebrow">${landed ? "Just landed" : flying ? "In the air" : "Your flight"}</div>
+    <div class="ft-head">${icon(f)}${logo(brandOf(f))}<b>${esc(f.airline.name)} ${esc(f.flightNumber)}</b><span class="muted">${esc(f.from)} → ${esc(f.to)}</span>${isCheckedIn(f) ? `<span class="ck-done mini">✓ Checked in</span>` : ""}</div>
+    <dl class="kv">${row("Departs", `${DT(f.start)} · ${esc(apName(f.from))}${termGate(f.departure) ? ` · ${esc(termGate(f.departure))}` : ""}`)}${row("Arrives", `${arrives(f)}${termGate(f.arrival) ? ` · ${esc(termGate(f.arrival))}` : ""}`)}${row(seatList(f).includes(",") ? "Seats" : "Seat", seatList(f))}${row("Bags", f.baggage ? esc(f.baggage) : "")}${(flying || landed) ? row("Baggage claim", `${f.arrival?.carousel ? `<b>Carousel ${esc(f.arrival.carousel)}</b> · ` : ""}${esc(f.arrival?.bags || "")}`) : ""}${codeRow("Confirmation", f.confirmation)}</dl>
+    ${leave}
+    <div class="btns">${link(f.airline.manage, "Manage reservation", true)}${link(status(f), "Flightradar24")}${ckOpen && !isCheckedIn(f) ? ckLink(f, f.airline.checkin, "Check in") + ckToggle(f) : ""}</div>
+  </section>`;
+}
+
+function flightNowCard(f) {
+  const dm = driveMin(f.from), lead = f.international ? 3 : 2;
+  const fromHome = dm ? `<div class="flag ok">Leave ${esc(HOME.address)} by ${timeAt(ms(f.start) - lead * H - dm * M, f.start)} on ${DD(f.start)}: about ${dm} min to ${esc(apName(f.from))} and ${lead} h at the airport.</div>
+    <div class="btns">${link(directions(HOME.address, depPlace(f)), "Directions to the airport", true)}</div>` : "";
+  return `<section class="card" aria-label="Your next flight"><div class="eyebrow">Your next flight</div>${fromHome}${segBlock(f)}</section>`;
+}
+
+function lodgingCard(s, label) {
+  return `<section class="card" aria-label="${esc(label)}">${segPhoto(s)}
+    <div class="eyebrow">${esc(label)}</div>
+    <h3>${esc(s.title)}</h3>
+    <dl class="kv">
+      ${row("Address", `${esc(s.address)}${copyBtn(s.address)}`)}
+      ${s.home ? "" : row("Check-in", DT(s.start)) + row("Check-out", DT(s.end))}
+      ${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>${copyBtn(s.phone)}` : "")}
+    </dl>
+    ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}
+    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !hotelCk(s))}${link(s.link, "Manage booking")}</div>
+  </section>`;
+}
+
+function segLabel(s) {
+  if (s.type === "flight") return `${s.flightNumber} ${s.from} → ${s.to}`;
+  if (s.type === "lodging") return `Check in: ${s.title}`;
+  return s.title;
+}
+
+function renderNow() {
+  const t0 = now();
+  const active = tripsFor(state.person).filter(t => ms(t.start) - 3 * D <= t0 && t0 <= ms(t.end) + 12 * H);
+  let html = previewControls();
+  if (!active.length) {
+    const next = tripsFor(state.person).find(t => ms(t.start) > t0);
+    if (!next) return html + `<div class="empty">No upcoming trips.</div>`;
+    const firstAct = actionsFor(next).filter(a => a.k !== "stay").sort((a, b) => a.from - b.from)[0];
+    html += `<section class="hero"><div class="hero-head calm"><div class="eyebrow">No trip right now</div>
+      <h2>Next: ${esc(next.title)}</h2><p class="sub">${rangeStr(next.start, next.end)} · starts ${rel(ms(next.start) - t0)}</p></div>
+      <div class="hero-body">${firstAct ? `<p class="note">First thing to do: <b>${esc(actionCard(firstAct, next).title.replace(/<[^>]+>/g, ""))}</b> from ${when(firstAct.from, firstAct.s.start)}.</p>` : ""}
+      ${(next.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}</div></section>`;
+    return html;
+  }
+  for (const trip of active) {
+    const acts = actionsFor(trip);
+    const live = acts.filter(a => a.from <= t0 && t0 < a.to).sort((a, b) => b.p - a.p);
+    let primary = live[0];
+    const upcoming = acts.filter(a => a.from > t0 && a.k !== "stay").sort((a, b) => a.from - b.from);
+    let head;
+    if (primary) {
+      const c = actionCard(primary, trip);
+      head = `<section class="hero${trip.work ? " work" : ""}">${workRibbon(trip)}${tripPhoto(trip, "hero-photo")}<div class="hero-head${primary.k === "stay" ? " calm" : ""}"><div class="eyebrow">${esc(trip.title)} · ${c.eyebrow}</div><h2>${c.title}</h2><p class="sub">${c.sub}</p></div>
+        ${c.body ? `<div class="hero-body">${c.body}</div>` : ""}</section>`;
+      const others = live.slice(1).filter(a => a.k !== "stay" && !(a.k === "checkout" && primary.k === "stay"));
+      for (const o of others) {
+        const c2 = actionCard(o, trip);
+        head += `<section class="hero"><div class="hero-head calm"><div class="eyebrow">Also now · ${c2.eyebrow}</div><h2>${c2.title}</h2><p class="sub">${c2.sub}</p></div>${c2.body ? `<div class="hero-body">${c2.body}</div>` : ""}</section>`;
+      }
+    } else {
+      const n = upcoming[0];
+      const c = n ? actionCard(n, trip) : null;
+      head = `<section class="hero${trip.work ? " work" : ""}">${workRibbon(trip)}${tripPhoto(trip, "hero-photo")}<div class="hero-head calm"><div class="eyebrow">${esc(trip.title)}</div>
+        <h2>${n ? `Coming up ${rel(n.from - t0)}` : "Trip wrapping up"}</h2><p class="sub">${n ? `${c.title.replace(/<[^>]+>/g, "")} · ${when(n.from, n.s.start)}` : "Nothing else scheduled."}</p></div></section>`;
+    }
+    const topFlight = trip.segments.filter(s => s.type === "flight" && doneAt(s) > t0 && ms(s.start) - 2 * D <= t0).sort((a, b) => ms(a.start) - ms(b.start))[0];
+    if (topFlight) html += flightTopCard(topFlight);
+    html += head;
+    // Prefer the lodging booked for the selected person (e.g. a companion's own room).
+    const lodgings = trip.segments.filter(s => s.type === "lodging");
+    const mine = lodgings.filter(s => (s.travelers || []).includes(state.person));
+    const pool = mine.length ? mine : lodgings;
+    const stayNow = pool.find(s => ms(s.start) - 8 * H <= t0 && t0 < doneAt(s));  // stays shown until 2 h after checkout
+    const stayNext = pool.find(s => ms(s.start) > t0);
+    const st = stayNow || stayNext;
+    // Until you've landed, the next flight matters more than the hotel at the other end.
+    const nextFlight = trip.segments.find(s => s.type === "flight" && ms(s.end) > t0);
+    const flyFirst = nextFlight && (!st || ms(nextFlight.end) <= ms(st.start) + 24 * H);
+    // The pinned flight card above already covers the flight; the stay card stays until 2 h after checkout.
+    if (st && !(flyFirst && !stayNow)) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
+    else if (flyFirst && !topFlight) html += flightNowCard(nextFlight);
+    const nextSegs = withRides(trip).filter(s => ms(s.start) > t0).slice(0, 5);
+    if (nextSegs.length) html += `<section class="card"><div class="eyebrow">Next in this trip</div><ul class="next">
+      ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.type === "ride" ? s.title : segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${quickBtn(s) ? `<br>${quickBtn(s)}` : ""}${s.type === "ride" ? `<br><a class="btn mini" ${hrefAttrs(uber(s.toAddr, s.to))}>Open Uber ↗</a>` : ""}</span></li>`).join("")}</ul></section>`;
+    if ((trip.watch || []).length) html += trip.watch.map(w => `<div class="flag">${esc(w)}</div>`).join("");
+  }
+  return html;
+}
+
+function previewControls() {
+  // based on your next flight that isn't done yet (today's flight home, not the trip's first flight)
+  const f = tripsFor(state.person).flatMap(t => t.segments).filter(s => s.type === "flight" && doneAt(s) > Date.now())
+    .sort((a, b) => ms(a.start) - ms(b.start))[0];
+  const chips = f ? [
+    ["Live", null],
+    ["Day before flight", ms(f.start) - 20 * H],
+    ["At the airport", ms(f.start) - 90 * M],
+    ["Just landed", ms(f.end) + 15 * M],
+    ["1 h after landing", ms(f.end) + 60 * M],
+  ] : [["Live", null]];
+  return `<div class="preview"><div class="row"><span class="eyebrow">Preview a moment</span>${f ? `<span class="muted">based on ${esc(f.flightNumber)}</span>` : ""}</div>
+    <div class="row">${chips.map(([l, v]) => `<button class="chip" data-at="${v ?? ""}" aria-pressed="${(state.override ?? null) === v}">${l}</button>`).join("")}
+    <input type="datetime-local" id="at" aria-label="Pick a date and time"></div>
+    ${state.override ? `<p class="note">Showing the page as it would look on <b>${when(state.override, f ? f.start : new Date().toISOString())}</b> (${esc(f ? apName(f.from) : "")} time).</p>` : ""}</div>`;
+}
+
+// ---------- icons: one small glyph per kind of booking ----------
+const ICONS = {
+  flight: '<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>',
+  lodging: '<path d="M4 21V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v4h4a1 1 0 0 1 1 1v12h2v2H2v-2zm3-14v2h2V7zm4 0v2h2V7zm-4 4v2h2v-2zm4 0v2h2v-2zm6 0v2h2v-2zm-10 4v2h2v-2zm4 0v2h2v-2zm6 0v2h2v-2z"/>',
+  home: '<path d="M12 3 2 11h3v9h5v-6h4v6h5v-9h3z"/>',
+  car: '<path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11a2 2 0 0 1 2 2v4h-2v2h-3v-2H8v2H5v-2H3v-4a2 2 0 0 1 2-2zm2.2 0h9.6l-1-3H8.2zM6.5 15a1.5 1.5 0 1 0 0-.01zm11 0a1.5 1.5 0 1 0 0-.01z"/>',
+  transfer: '<path d="M3 7a2 2 0 0 1 2-2h11l5 5v6h-2a2.5 2.5 0 0 1-5 0H9a2.5 2.5 0 0 1-5 0H3zm2 0v3h4V7zm6 0v3h4V7zm6 1v2h2z"/>',
+  activity: '<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4zm6 0v10h2V7z"/>',
+  restaurant: '<path d="M7 2v8a2 2 0 0 1-1.5 1.94V22h-2V11.94A2 2 0 0 1 2 10V2h1.5v6h1V2h1.5v6h1V2zm9 0c2.2 0 4 2.24 4 5v6h-2.5v9h-2V2z"/>',
+  movie: '<path d="M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm1 2v2h2V6zm12 0v2h2V6zM5 10v2h2v-2zm12 0v2h2v-2zM5 14v2h2v-2zm12 0v2h2v-2zm-8-8v12h6V6z"/>',
+  event: '<path d="M12 2a6 6 0 0 1 6 6c0 4-3.5 7-6 8-2.5-1-6-4-6-8a6 6 0 0 1 6-6zm-1 15h2l-.5 1.5c1.5 1 2.5 2.2 2.5 3.5h-2c0-.8-.6-1.6-1.6-2.2L11 17z"/>',
+  show: '<path d="M12 2l2.9 6.26L22 9.27l-5.2 4.87L18.18 21 12 17.27 5.82 21l1.38-6.86L2 9.27l7.1-1.01z"/>',
+  ride: '<path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11a2 2 0 0 1 2 2v4h-2v2h-3v-2H8v2H5v-2H3v-4a2 2 0 0 1 2-2zm2.2 0h9.6l-1-3H8.2zM6.5 15a1.5 1.5 0 1 0 0-.01zm11 0a1.5 1.5 0 1 0 0-.01z"/>',
+};
+// ---------- company branding: color stripe + the company's own site icon ----------
+const BRANDS = [
+  { key: "united", name: "United", domain: "united.com", color: "#002244", match: /united/i },
+  { key: "hgv", name: "Hilton Grand Vacations", domain: "hgvc.com", color: "#00305C", match: /hgvc|grand vacations/i },
+  { key: "hilton", name: "Hilton", domain: "hilton.com", color: "#002F61", match: /hilton|homewood/i },
+  { key: "southwest", name: "Southwest", domain: "southwest.com", color: "#304CB2", match: /southwest/i },
+  { key: "delta", name: "Delta", domain: "delta.com", color: "#003366", match: /delta/i },
+  { key: "copa", name: "Copa", domain: "copaair.com", color: "#0032A0", match: /copa/i },
+  { key: "swiss", name: "SWISS", domain: "swiss.com", color: "#E2001A", match: /swiss\.com|^swiss$/i },
+  { key: "easyjet", name: "easyJet", domain: "easyjet.com", color: "#FF6600", match: /easyjet/i },
+  { key: "avis", name: "Avis", domain: "avis.com", color: "#D4002A", match: /avis/i },
+  { key: "europcar", name: "Europcar", domain: "europcar.com", color: "#00973A", match: /europcar/i },
+  { key: "expedia", name: "Expedia", domain: "expedia.com", color: "#191E3B", match: /expedia/i },
+  { key: "suites", name: "Suites Center", domain: "hotelescenter.es", color: "#1D3557", match: /hotelescenter|suites center/i },
+  { key: "ameron", name: "AMERON", domain: "ameroncollection.com", color: "#3C3C3B", match: /ameron/i },
+  { key: "transfermilan", name: "TransferMilan", domain: "transfermilan.com", color: "#1B4D8C", match: /transfermilan/i },
+  { key: "lindt", name: "Lindt", domain: "lindt-home-of-chocolate.com", color: "#002E5D", match: /lindt/i },
+  { key: "cinemark", name: "Cinemark", domain: "cinemark.com", color: "#C8102E", match: /cinemark/i },
+  { key: "amc", name: "AMC Theatres", domain: "amctheatres.com", color: "#E21836", match: /amctheatres|\bamc\b/i },
+  { key: "opentable", name: "OpenTable", domain: "opentable.com", color: "#DA3743", match: /opentable/i },
+  { key: "fcb", name: "FC Barcelona", domain: "fcbarcelona.com", color: "#A50044", match: /fc ?barcelona|fcbarcelona/i },
+];
+function brandOf(s) {
+  if (!s || s.type === "ride") return s?.type === "ride" ? { key: "uber", name: "Uber", domain: "uber.com", color: "#000000" } : null;
+  const hay = [s.airline?.name, s.title, s.link, s.onlineCheckin?.url].filter(Boolean).join(" ");
+  if (s.type === "flight") return BRANDS.find(b => b.match.test(s.airline?.name || "")) || null;
+  return BRANDS.find(b => b.match.test(hay)) || null;
+}
+// Logos are served from this site (logos/<key>.png, saved by fetch_logos.py), so they also work offline.
+const logo = b => b ? `<img class="logo" src="../logos/${b.key}.png" alt="${esc(b.name)}" width="18" height="18" loading="lazy" onerror="this.remove()">` : "";
+const brandStyle = s => { const b = brandOf(s); return b ? ` style="--brand:${b.color}"` : ""; };
+
+const kindOf = s => s.type === "lodging" && s.home ? "home" : (s.kind && ICONS[s.kind] ? s.kind : s.type);
+const icon = s => `<span class="ic ic-${kindOf(s)}" aria-hidden="true"><svg viewBox="0 0 24 24">${ICONS[kindOf(s)] || ICONS.activity}</svg></span>`;
+
+// ---------- rides: when nothing is booked between an airport and where you're staying ----------
+// Local ISO string (same UTC offset as ref) for an instant, so DT()/T() show it in that place's time.
+function isoAt(t, ref) {
+  const off = offMin(ref), d = new Date(t + off * M), p = n => String(n).padStart(2, "0");
+  const sign = off < 0 ? "-" : "+", a = Math.abs(off);
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:00${sign}${p(Math.floor(a / 60))}:${p(a % 60)}`;
+}
+const uber = (addr, name) => `https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(addr)}${name ? `&dropoff[nickname]=${encodeURIComponent(name)}` : ""}`;
+const hasGround = (segs, from, to) => segs.some(x => (x.type === "car" || x.type === "transfer") && ms(x.start) < to && ms(x.end) > from);
+function ridesFor(trip) {
+  const segs = trip.segments, rides = [];
+  segs.forEach((f, i) => {
+    if (f.type !== "flight") return;
+    const st = ms(f.start), en = ms(f.end);
+    const next = segs[i + 1], prev = segs[i - 1];
+    const connOut = next && next.type === "flight" && ms(next.start) - en < 5 * H;
+    const connIn = prev && prev.type === "flight" && st - ms(prev.end) < 5 * H;
+    // arriving: airport -> where you're staying
+    if (!connOut && !driveMin(f.to) && !hasGround(segs, en, en + 8 * H)) {
+      const stay = segs.find(x => x.type === "lodging" && ms(x.start) < en + 8 * H && ms(x.end) > en);
+      if (stay) rides.push({ id: `ride-${f.id}`, type: "ride", dir: "in", title: `Uber to ${stay.title}`, from: `${f.to} airport`, fromLabel: apName(f.to) + " airport",
+        toAddr: stay.address, to: stay.title, home: stay.home, start: isoAt(en + 40 * M, f.end), end: isoAt(en + 2 * H, f.end) });
+    }
+    // leaving: where you're staying -> airport
+    if (!connIn && !driveMin(f.from) && !hasGround(segs, st - 6 * H, st)) {
+      const stay = segs.filter(x => x.type === "lodging" && ms(x.end) <= st + 2 * H && ms(x.end) >= st - 18 * H).pop();
+      const lead = (f.international ? 3 : 2) * H;
+      if (stay) rides.push({ id: `ride-${f.id}-out`, type: "ride", dir: "out", title: `Uber to ${apName(f.from)} airport`, fromLabel: stay.title, from: stay.address,
+        toAddr: depPlace(f), to: `${apName(f.from)} airport`, start: isoAt(st - lead - 60 * M, f.start), end: isoAt(st - lead, f.start) });
+    }
+  });
+  // trip.ground.mode: "uber" = Uber is the plan (no warning); "family" = family drives (no Uber)
+  const gm = trip.ground?.mode;
+  rides.forEach(r => { r.plan = gm; r.planNote = trip.ground?.note || "";
+    if (gm === "family") r.title = `Family ride to ${r.to}`; });
+  return rides;
+}
+// Rides sit right next to their flight: the ride to the airport just before it, the ride from it just after.
+function withRides(trip) {
+  const rides = ridesFor(trip), out = [];
+  for (const s of trip.segments) {
+    if (s.type === "flight") out.push(...rides.filter(r => r.id === `ride-${s.id}-out`));
+    out.push(s);
+    if (s.type === "flight") out.push(...rides.filter(r => r.id === `ride-${s.id}`));
+  }
+  return out;
+}
+function rideBlock(r) {
+  if (r.plan === "family") return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · Family ride</span>
+    <h4>${r.dir === "in" ? "Family picks you up" : "Family drives you to the airport"}</h4>
+    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)} · around ${T(r.start)}</p>${r.planNote ? `<p class="note">• ${esc(r.planNote)}</p>` : ""}
+    <div class="btns">${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
+  return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · ${logo(brandOf(r))}Uber</span>
+    <h4>${r.plan === "uber" ? esc(r.title) : "No car booked: take an Uber"}</h4>
+    <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}${r.home && !r.plan ? " (or a family pickup)" : ""} · around ${T(r.start)}</p>
+    <div class="btns">${link(uber(r.toAddr, r.to), "Open Uber", true)}${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
+}
+
+// Finished items (flight landed, dinner over, hotel checked out) fold into a slim "Done" line; tap to see the full card.
+// When an item counts as done (Santiago's rules): flights 3 h after scheduled arrival (room for delays),
+// transfers/rides 1 h after, dinners/events/shows 4 h after they START (multi-day activities when they end),
+// hotel stays 2 h after checkout, cars when they end.
+const doneAt = s => {
+  if (s.type === "flight") return ms(s.end) + 3 * H;
+  if (s.type === "transfer" || s.type === "ride") return ms(s.end) + H;
+  if (s.type === "lodging") return ms(s.end) + 2 * H;   // hotel stays fold 2 h after checkout
+  if (s.type === "activity" && ms(s.end) - ms(s.start) <= 12 * H) return ms(s.start) + 4 * H;
+  return ms(s.end);
+};
+function segOrDone(s) {
+  if (!s.end || doneAt(s) > Date.now()) return segBlock(s);
+  const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
+  return `<details class="seg-done"><summary><span class="done-chip">✓ Done</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
+}
+// Cancellation terms on a reservation: {deadline: ISO or null, fee, terms}. Warns when the free-cancel deadline is close.
+function cancelInfo(s) {
+  const c = s.cancellation; if (!c) return "";
+  const t0 = Date.now(), dl = c.deadline ? ms(c.deadline) : null;
+  let line;
+  if (dl && dl > t0) line = `Free to cancel until <b>${DT(c.deadline)}</b>; after that ${esc(c.fee)}`;
+  else if (dl) line = `Cancelling now costs <b>${esc(c.fee)}</b> (free cancellation ended ${DT(c.deadline)})`;
+  else line = `<b>${esc(c.fee)}</b>`;
+  const soon = dl && dl > t0 && dl - t0 < 2 * D;
+  return `<div class="${soon ? "flag" : "note cancel"}">${soon ? `Cancel by ${DT(c.deadline)} to avoid ${esc(c.fee)}.` : `Cancellation: ${line}.`}${c.terms ? `<br><span class="muted">${esc(c.terms)}</span>` : ""}</div>`;
+}
+function segBlock(s) {
+  if (s.type === "ride") return rideBlock(s);
+  if (s.type === "flight") {
+    const dur = ms(s.end) - ms(s.start), hh = Math.floor(dur / H), mm = Math.round((dur % H) / M);
+    return `<div class="seg branded"${brandStyle(s)}><div class="seg-main"><span class="seg-type">${icon(s)}Flight · ${logo(brandOf(s))}${esc(s.airline.name)} ${esc(s.flightNumber)}</span>
+      <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
+      <div class="mid">${hh}h ${mm}m<br>✈</div>
+      <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
+      <div class="stub"><dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
+      <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
+  }
+  const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
+  return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
+    <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
+    ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
+    ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
+    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+}
+
+// "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
+function tripEnds(t) {
+  const fl = t.segments.filter(x => x.type === "flight");
+  const out = fl[0], back = fl.length > 1 ? fl[fl.length - 1] : null;
+  const leave = out ? `${DD(out.start)} (${esc(out.from)})` : DD(t.start);
+  const end = back ? ["Back", `${DD(back.end)} (${esc(back.to)})`] : out ? ["Arrive", `${DD(out.end)} (${esc(out.to)})`] : ["Until", DD(t.end)];
+  return `<div class="ends"><span><b>Leave</b> ${leave}</span><span><b>${end[0]}</b> ${end[1]}</span></div>`;
+}
+
+function quickRow(t) {
+  const items = t.segments.filter(x => checkinLink(x) && !isCheckedIn(x) && Date.now() < ckUntil(x));
+  if (!items.length) return "";
+  const label = x => x.type === "flight" ? `✈ ${x.flightNumber.split(" ")[0]} · ${DD(x.start).split(", ")[1]}` : `Hotel · ${DD(x.start).split(", ")[1]}`;
+  return `<div class="quick"><span class="eyebrow">Check in</span>${items.map(x => ckTag(x, `<a class="btn mini" ${hrefAttrs(checkinLink(x))}>${esc(label(x))} ↗</a>`)).join("")}</div>`;
+}
+
+// Opened from the home-screen shortcut: one big button per upcoming check-in (next 14 days first)
+function renderCheckin() {
+  const t0 = Date.now();
+  const items = tripsFor(state.person).flatMap(t => t.segments.map(x => ({ t, x })))
+    .filter(({ x }) => checkinLink(x) && (x.type === "flight" ? ms(x.start) > t0 - 6 * H : t0 < ckUntil(x)))
+    .sort((a, b) => ms(a.x.start) - ms(b.x.start)).slice(0, 6);
+  if (!items.length) return `<div class="empty">Nothing to check in for right now.</div>`;
+  return `<section class="card"><div class="eyebrow">Check in</div>${items.map(({ t, x }) => {
+    const label = x.type === "flight" ? `${x.airline.name} ${x.flightNumber.split(" ")[0]} · ${x.from} → ${x.to}` : x.title;
+    const opens = x.type === "flight" ? ms(x.start) - (x.airline.checkinHours || 24) * H : ms(x.start) - (x.onlineCheckin.opensHours || 24) * H;
+    const status = isCheckedIn(x) ? "✓ Checked in" : opens <= t0 ? "Check-in is open" : `Opens ${when(opens, x.start)}`;
+    return `<div class="ckrow"${brandStyle(x)}><div><b>${icon(x)}${logo(brandOf(x))}${esc(label)}</b><div class="muted">${DT(x.start)} · ${esc(t.title)}</div><div class="note">${status}${x.confirmation ? ` · <span class="code">${esc(x.confirmation)}</span>` : ""}</div></div>
+      ${isCheckedIn(x) ? "" : link(checkinLink(x), "Check in", opens <= t0)}</div>`;
+  }).join("")}</section>`;
+}
+
+// Trip backdrop photos live in photos/<name>.jpg (Wikimedia Commons; credits shown in About)
+const PHOTO_CREDITS = {"boulder": {"title": "Flatirons Sunrise.jpg", "artist": "Tyler Cipriani", "license": "CC BY-SA 4.0", "url": "https://commons.wikimedia.org/wiki/File:Flatirons_Sunrise.jpg"}, "diamond-head": {"title": "Diamond Head from Waikiki Beach.jpg", "artist": "Jackie Gleason Columbus, OH / Partyk1d24 at en.wikipedia", "license": "Public domain", "url": "https://commons.wikimedia.org/wiki/File:Diamond_Head_from_Waikiki_Beach.jpg"}, "alta-gracia": {"title": "Estancia Jesuítica de Alta Gracia Argentina 2005-01-01.jpg", "artist": "Sofocador", "license": "CC BY-SA 2.0", "url": "https://commons.wikimedia.org/wiki/File:Estancia_Jesu%C3%ADtica_de_Alta_Gracia_Argentina_2005-01-01.jpg"}, "matterhorn": {"title": "Matterhorn Breuil-Cervinia-1.jpg", "artist": "Rufus46", "license": "CC BY-SA 3.0", "url": "https://commons.wikimedia.org/wiki/File:Matterhorn_Breuil-Cervinia-1.jpg"}, "waikiki": {"title": "Waikiki Beach (2024)-L1004709.jpg", "artist": "Frank Schulenburg", "license": "CC BY-SA 4.0", "url": "https://commons.wikimedia.org/wiki/File:Waikiki_Beach_(2024)-L1004709.jpg"}, "golden-gate": {"title": "Golden gate bridge sunset (Unsplash).jpg", "artist": "Denys Nevozhai dnevozhai", "license": "CC0", "url": "https://commons.wikimedia.org/wiki/File:Golden_gate_bridge_sunset_(Unsplash).jpg"}, "las-vegas": {"title": "Las Vegas Strip at night, 2012.jpg", "artist": "Clément Bardot", "license": "CC BY-SA 3.0", "url": "https://commons.wikimedia.org/wiki/File:Las_Vegas_Strip_at_night,_2012.jpg"}, "hollywood": {"title": "Hollywood Sign (Zuschnitt).jpg", "artist": "Thomas Wolf, www.foto-tw.de", "license": "CC BY-SA 3.0", "url": "https://commons.wikimedia.org/wiki/File:Hollywood_Sign_(Zuschnitt).jpg"}};
+const segPhoto = s => s.photoUrl ? `<img class="seg-photo" src="${esc(s.photoUrl)}" alt="${esc(s.title)}" loading="lazy" referrerpolicy="no-referrer"${s.photoPos ? ` style="object-position:${esc(s.photoPos)}"` : ""} onerror="this.remove()">` : s.photo ? `<div class="seg-photo" style="background-image:url('../photos/${esc(s.photo)}.jpg')" role="img" aria-label="${esc(s.title)}"></div>` : "";
+const tripPhoto = (t, cls = "trip-photo") => t.photo ? `<div class="${cls}" style="background-image:url('../photos/${esc(t.photo)}.jpg')" role="img" aria-label="${esc(t.place || t.title)}"></div>` : "";
+
+// each trip card gets its own colour band
+const TRIP_COLORS = ["#2E5BEA", "#E0571B", "#0B8F7D", "#8B5CF6", "#D9A100", "#D63864"];
+
+// Work trips (trip.work = {org: "Google"}): a diagonal ribbon across the card's top-right corner with the company logo.
+const workRibbon = t => t.work ? `<div class="work-bar" aria-label="Work trip for ${esc(t.work.org)}">${t.work.logo ? `<img src="../logos/${esc(t.work.logo)}.png" alt="" width="18" height="18">` : ""}<b>WORK</b><span>·</span><b class="org">${esc(t.work.org.toUpperCase())}</b></div>` : "";
+function renderTrips(past) {
+  const t0 = Date.now();
+  const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
+  if (past) list.reverse();
+  if (!list.length) return `<div class="empty">${past ? "No past trips yet. Trips move here after they end." : "No upcoming trips."}</div>`;
+  let html = "", lastMonth = "";
+  list.forEach((t, i) => {
+    const p = parts(ms(t.start), offMin(t.start)), mk = `${MO[p.mo]} ${p.y}`;
+    if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
+    const soon = !past && ms(t.start) - t0 < 7 * D;
+    html += `<details class="trip${t.work ? " work" : ""}" style="--tc:${t.work ? "#4285F4" : TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
+      ${workRibbon(t)}${tripPhoto(t)}
+      <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
+      <div class="muted">${esc(t.place)}</div>
+      <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentative</span>` : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
+        ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
+      ${tripEnds(t)}
+      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segOrDone).join("")}</div></details>`;
+  });
+  return html;
+}
+
+// ---------- Family tab (Alicia's copy): a plain summary of Dani's trips, just who/when/which flight and hotel ----------
+function renderFamily() {
+  const t0 = Date.now();
+  const list = state.family.filter(t => ms(t.end) > t0 - 2 * D);
+  if (!list.length) return `<div class="empty">No upcoming trips.</div>`;
+  return list.map(t => `<section class="card fam-card"><div class="eyebrow">${rangeStr(t.start, t.end)}${ms(t.start) <= t0 && t0 <= ms(t.end) ? " · Happening now" : ""}</div>
+    <h3>${esc(t.title)}</h3><div class="muted">${esc(t.place)}</div>
+    <div class="chips">${t.withViewer ? `<span class="chip soon">You're on this trip</span>` : ""}${t.who.map(n => `<span class="chip">${first(n)}</span>`).join("")}</div>
+    ${t.flights.length ? `<div class="eyebrow" style="margin-top:6px">Flights</div><ul class="next">${t.flights.map(f => `<li><span class="when">${DD(f.start)}</span><span><b>${icon({ type: "flight" })}${esc(f.airline)} ${esc(f.flightNumber)} · ${esc(f.from)} → ${esc(f.to)}</b><br><span class="muted">Departs ${T(f.start)} · arrives ${T(f.end)}${DD(f.end) !== DD(f.start) ? ` (${DD(f.end)})` : ""} local time</span>${f.who.length ? `<br><span class="muted">${f.who.map(first).join(", ")}</span>` : ""}</span></li>`).join("")}</ul>` : `<p class="note">No flights booked yet.</p>`}
+    ${t.stays.length ? `<div class="eyebrow" style="margin-top:6px">Staying at</div><ul class="next">${t.stays.map(s => `<li><span class="when">${DD(s.start)}</span><span><b>${icon({ type: "lodging" })}${esc(s.title)}</b><br><span class="muted">until ${DD(s.end)}</span></span></li>`).join("")}</ul>` : ""}
+  </section>`).join("");
+}
+
+// ---------- Local tab: plans around home (restaurants, movies, shows, local hotels) ----------
+const localFor = p => state.local.filter(s => (s.travelers || []).length ? s.travelers.includes(p) : p === MAIN);
+function renderLocal() {
+  const t0 = Date.now(), items = localFor(state.person);
+  const next = items.filter(s => doneAt(s) > t0), recent = items.filter(s => doneAt(s) <= t0 && t0 - ms(s.end) < 30 * D).reverse();
+  let html = "", lastMonth = "";
+  next.forEach(s => {
+    const p = parts(ms(s.start), offMin(s.start)), mk = `${MO[p.mo]} ${p.y}`;
+    if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
+    html += segBlock(s);
+  });
+  if (!next.length) html += `<div class="empty">Nothing planned around home yet. Restaurant reservations, movie and show tickets, and local hotel stays show up here.</div>`;
+  if (recent.length) html += `<details class="trip"><summary><div class="trip-top"><h3>Recent (last 30 days)</h3><span class="chev" aria-hidden="true">›</span></div></summary><div class="trip-body">${recent.map(segBlock).join("")}</div></details>`;
+  return html;
+}
+// On the Now tab: today's local plans, so tonight's dinner or movie is one glance away
+function localToday() {
+  const t0 = Date.now(), today = new Date().toDateString();
+  const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() === today);
+  if (!items.length) return "";
+  return `<section class="card" aria-label="Today nearby"><div class="eyebrow">Today nearby</div>${items.map(segBlock).join("")}</section>`;
+}
+
+// Each check (daily or on request) is a run: {at, kind, summary, changes:[{type: added|changed|removed|note, text, tripId}]}, newest first.
+const runsOf = s => (s?.runs || []).slice().sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+const BANNER_HOURS = 24;  // the red banner shows a run's changes for a day, then they live only in the Changes tab
+function renderBanner() {
+  const s = state.status;
+  if (!s) return "";
+  const checked = s.lastChecked ? `Last checked ${rel(Date.parse(s.lastChecked) - Date.now())}.` : "";
+  const about = document.getElementById("about-checked"); if (about) about.textContent = checked;
+  if (state.view === "changes") return "";
+  const fresh = runsOf(s).filter(r => Date.now() - Date.parse(r.at) < BANNER_HOURS * H).flatMap(r => r.changes || []);
+  if (!fresh.length) return "";
+  return `<div class="banner alert"><strong>${fresh.length} change${fresh.length > 1 ? "s" : ""} in the last day</strong>${fresh.slice(0, 4).map(c => `<span>${esc(c.text)}</span>`).join("")}<span><a href="#changes">${fresh.length > 4 ? `See all ${fresh.length} in Changes` : "History in Changes"} ›</a></span></div>`;
+}
+const tripName = id => id === "local" ? "Local" : (state.trips.find(t => t.id === id)?.title || "");
+const runWhen = at => new Date(at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+function renderChanges() {
+  const runs = runsOf(state.status);
+  if (!runs.length) return `<div class="empty">No checks recorded yet. Every check adds an entry here, newest first.</div>`;
+  const label = { added: "Added", changed: "Changed", removed: "Removed", note: "Note" };
+  let html = "", lastDay = "";
+  runs.forEach(r => {
+    const day = new Date(r.at).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    if (day !== lastDay) { html += `<div class="month">${day}</div>`; lastDay = day; }
+    const ch = r.changes || [];
+    html += `<section class="run"><div class="run-head"><b>${esc(runWhen(r.at))}</b><span>${r.kind === "daily" ? "Scheduled check" : "Check on request"}</span></div>
+      ${r.summary ? `<div class="muted" style="font-size:13px">${esc(r.summary)}</div>` : ""}
+      ${ch.length ? `<ul>${ch.map(c => `<li><span class="ch ch-${esc(c.type || "note")}">${label[c.type] || "Note"}</span><div>${esc(c.text)}${tripName(c.tripId) ? `<div class="trip-name">${esc(tripName(c.tripId))}</div>` : ""}</div></li>`).join("")}</ul>` : `<div class="muted" style="font-size:13px">No changes.</div>`}</section>`;
+  });
+  return html;
+}
+
+function renderCredits() {
+  const el = document.getElementById("photo-credits"); if (!el || el.dataset.done) return;
+  el.innerHTML = "Trip photos from Wikimedia Commons: " + Object.values(PHOTO_CREDITS).map(c =>
+    `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title.replace(/\.(jpe?g|png)$/i, ""))}</a> by ${esc(c.artist)} (${esc(c.license)})`).join("; ") + ". Hotel photos load directly from each hotel's own website.";
+  el.dataset.done = "1";
+}
+
+function render() {
+  if (VIEW_ONLY) document.getElementById("changes-link")?.remove();
+  const ft = document.getElementById("tab-family");
+  if (ft) { ft.hidden = !FAMILY_TAB; ft.textContent = state.familyLabel || ft.textContent; }
+  const lt = document.getElementById("tab-local");
+  if (lt && state.loaded) lt.hidden = !state.local.length;   // no Local tab when there are no local plans
+  renderCredits();
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === state.view)));
+  document.querySelectorAll(".footlink").forEach(b => b.dataset.view === state.view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  const app = document.getElementById("app");
+  document.querySelector(".who").hidden = state.locked || !state.loaded;
+  document.querySelector(".tabs").hidden = state.locked;
+  if (state.locked) {
+    app.innerHTML = `<form class="card" id="unlock" autocomplete="on"><div class="eyebrow">Private</div><h3>Enter the family passphrase</h3>
+      <p class="note">Trips are encrypted. You only need to do this once on this device.</p>
+      <input id="pass" type="password" autocomplete="current-password" aria-label="Passphrase" style="font:inherit;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink)">
+      ${state.unlockError ? `<div class="flag">${esc(state.unlockError)}</div>` : ""}
+      <div class="btns"><button class="btn primary" type="submit">Unlock</button></div></form>`;
+    return;
+  }
+  if (state.error) { app.innerHTML = `<div class="empty">${esc(state.error)}</div>`; return; }
+  if (!state.loaded) { app.innerHTML = `<div class="empty">Loading trips…</div>`; return; }
+  if (!state.trips.length) { app.innerHTML = `<div class="empty">No trips loaded yet. They'll appear here once they're added.</div>`; return; }
+  const people = allPeople();
+  if (!people.includes(state.person)) state.person = MAIN;
+  const sel = document.getElementById("person");
+  const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
+  if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
+  sel.value = state.person;
+  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
+  app.innerHTML = body + renderBanner();  // recent changes sit at the bottom (user preference); full history is under "Change history"
+  const seen = new Set();
+  app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
+}
+
+function tick() {
+  const c = document.getElementById("clock");
+  const d = new Date();
+  c.textContent = d.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+document.addEventListener("click", e => {
+  const mk = e.target.closest("[data-ck-mark],[data-ck-undo]");
+  if (mk) {
+    const key = mk.dataset.ckMark || mk.dataset.ckUndo, list = ckLocal().filter(k => k !== key);
+    if (mk.dataset.ckMark) list.push(key);
+    try { localStorage.setItem("tba-checkedin", JSON.stringify(list)); } catch (_) {}
+    render(); return;
+  }
+  const tab = e.target.closest(".tab, .footlink");
+  if (tab) { state.view = tab.dataset.view; try { localStorage.setItem("tba-view", state.view); } catch (_) {} render(); window.scrollTo(0, 0); return; }
+  const cp = e.target.closest(".copy");
+  if (cp) {
+    const v = cp.dataset.copy;
+    const done = () => { cp.textContent = "Copied"; setTimeout(() => cp.textContent = "Copy", 1500); };
+    try { navigator.clipboard.writeText(v).then(done, () => selectText(cp)); } catch (_) { selectText(cp); }
+    return;
+  }
+  const chip = e.target.closest(".preview .chip");
+  if (chip) { state.override = chip.dataset.at ? +chip.dataset.at : null; render(); }
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "person") {
+    state.person = e.target.value; state.override = null;
+    render(); return;
+  }
+  if (e.target.id === "at" && e.target.value) { state.override = new Date(e.target.value).getTime(); render(); }
+});
+function selectText(btn) {
+  const span = btn.previousElementSibling || btn.parentElement;
+  const r = document.createRange(); r.selectNodeContents(span);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+}
+
+tick(); setInterval(() => { tick(); if (!state.override && state.view === "now") render(); }, 60e3);
+render();
+
+// ---------- encrypted data: AES-GCM, key from PBKDF2(passphrase) ----------
+const b64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+let blob = null;
+async function decrypt(pass) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(blob.salt), iterations: blob.iter, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(blob.iv) }, key, b64(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function apply(data) {
+  MAIN = data.main; HOME = data.home || null;
+  if (!state.person) state.person = MAIN;
+  state.trips = (data.trips || []).sort((a, b) => ms(a.start) - ms(b.start));
+  state.status = data.status || null;
+  state.local = (data.local || []).sort((a, b) => ms(a.start) - ms(b.start));
+  state.family = (data.family || []).sort((a, b) => ms(a.start) - ms(b.start));
+  state.familyLabel = data.familyLabel || "Family trips";
+  state.loaded = true; state.locked = false;
+  document.getElementById("lock").hidden = false;
+}
+async function tryUnlock(pass, remember) {
+  try {
+    apply(await decrypt(pass));
+    if (remember) { try { localStorage.setItem("tba-pass", pass); } catch (_) {} }
+    render(); return true;
+  } catch (e) { return false; }
+}
+async function load() {
+  try {
+    const r = await fetch("trips.enc.json?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    blob = await r.json();
+  } catch (e) {
+    state.error = "Couldn't load trips. Check your connection and reopen the app."; render(); return;
+  }
+  let saved = null; try { saved = localStorage.getItem("tba-pass"); } catch (_) {}
+  if (saved && await tryUnlock(saved, false)) return;
+  state.locked = true; render();
+  setTimeout(() => document.getElementById("pass")?.focus(), 50);
+}
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "unlock") return;
+  e.preventDefault();
+  const pass = document.getElementById("pass").value.trim();
+  if (!(await tryUnlock(pass, true))) { state.unlockError = "That passphrase didn't work. Check spelling and dashes."; render(); }
+});
+document.getElementById("lock").addEventListener("click", () => {
+  try { localStorage.removeItem("tba-pass"); } catch (_) {}
+  location.reload();
+});
+load();
+// refresh data when the app comes back to the foreground
+// shortcuts open "#checkin" / "#now" / "#trips" even when the app is already open
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","family","past","changes","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !state.locked && blob) load(); });
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>

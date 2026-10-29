@@ -271,6 +271,7 @@ footer .about summary{color:var(--muted)}
       <button class="tab" role="tab" id="tab-now" data-view="now" aria-selected="true">Now</button>
       <button class="tab" role="tab" id="tab-trips" data-view="trips" aria-selected="false">Upcoming</button>
       <button class="tab" role="tab" id="tab-local" data-view="local" aria-selected="false">Local</button>
+      <button class="tab" role="tab" id="tab-family" data-view="family" aria-selected="false" hidden>Dani's trips</button>
     </nav>
   </header>
   <main id="app"><div class="empty">Loading trips…</div></main>
@@ -292,6 +293,8 @@ let HOME = null; // {address, airports: {SJC: minutes, ...}}
 const driveMin = code => HOME?.airports?.[code];
 // View-only copy (site/view/, built by publish.py): no codes, prices or manage/check-in actions.
 const VIEW_ONLY = false;
+// Alicia's copy (site/alicia/): adds a tab summarizing Dani's trips (flights, hotels, dates, who), no booking details.
+const FAMILY_TAB = false;
 const state = { trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
 
 try { const v = localStorage.getItem("tb-view"); if (v) state.view = v; } catch (e) {}
@@ -906,6 +909,19 @@ function renderTrips(past) {
   return html;
 }
 
+// ---------- Family tab (Alicia's copy): a plain summary of Dani's trips, just who/when/which flight and hotel ----------
+function renderFamily() {
+  const t0 = Date.now();
+  const list = state.family.filter(t => ms(t.end) > t0 - 2 * D);
+  if (!list.length) return `<div class="empty">No upcoming trips.</div>`;
+  return list.map(t => `<section class="card fam-card"><div class="eyebrow">${rangeStr(t.start, t.end)}${ms(t.start) <= t0 && t0 <= ms(t.end) ? " · Happening now" : ""}</div>
+    <h3>${esc(t.title)}</h3><div class="muted">${esc(t.place)}</div>
+    <div class="chips">${t.withViewer ? `<span class="chip soon">You're on this trip</span>` : ""}${t.who.map(n => `<span class="chip">${first(n)}</span>`).join("")}</div>
+    ${t.flights.length ? `<div class="eyebrow" style="margin-top:6px">Flights</div><ul class="next">${t.flights.map(f => `<li><span class="when">${DD(f.start)}</span><span><b>${icon({ type: "flight" })}${esc(f.airline)} ${esc(f.flightNumber)} · ${esc(f.from)} → ${esc(f.to)}</b><br><span class="muted">Departs ${T(f.start)} · arrives ${T(f.end)}${DD(f.end) !== DD(f.start) ? ` (${DD(f.end)})` : ""} local time</span>${f.who.length ? `<br><span class="muted">${f.who.map(first).join(", ")}</span>` : ""}</span></li>`).join("")}</ul>` : `<p class="note">No flights booked yet.</p>`}
+    ${t.stays.length ? `<div class="eyebrow" style="margin-top:6px">Staying at</div><ul class="next">${t.stays.map(s => `<li><span class="when">${DD(s.start)}</span><span><b>${icon({ type: "lodging" })}${esc(s.title)}</b><br><span class="muted">until ${DD(s.end)}</span></span></li>`).join("")}</ul>` : ""}
+  </section>`).join("");
+}
+
 // ---------- Local tab: plans around home (restaurants, movies, shows, local hotels) ----------
 const localFor = p => state.local.filter(s => (s.travelers || []).length ? s.travelers.includes(p) : p === MAIN);
 function renderLocal() {
@@ -969,6 +985,10 @@ function renderCredits() {
 
 function render() {
   if (VIEW_ONLY) document.getElementById("changes-link")?.remove();
+  const ft = document.getElementById("tab-family");
+  if (ft) { ft.hidden = !FAMILY_TAB; ft.textContent = state.familyLabel || ft.textContent; }
+  const lt = document.getElementById("tab-local");
+  if (lt && state.loaded) lt.hidden = !state.local.length;   // no Local tab when there are no local plans
   renderCredits();
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === state.view)));
   document.querySelectorAll(".footlink").forEach(b => b.dataset.view === state.view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
@@ -992,7 +1012,7 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
-  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
+  const body = state.view === "now" ? localToday() + renderNow() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
   app.innerHTML = body + renderBanner();  // recent changes sit at the bottom (user preference); full history is under "Change history"
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
@@ -1056,6 +1076,8 @@ function apply(data) {
   state.trips = (data.trips || []).sort((a, b) => ms(a.start) - ms(b.start));
   state.status = data.status || null;
   state.local = (data.local || []).sort((a, b) => ms(a.start) - ms(b.start));
+  state.family = (data.family || []).sort((a, b) => ms(a.start) - ms(b.start));
+  state.familyLabel = data.familyLabel || "Family trips";
   state.loaded = true; state.locked = false;
   document.getElementById("lock").hidden = false;
 }
@@ -1092,7 +1114,7 @@ document.getElementById("lock").addEventListener("click", () => {
 load();
 // refresh data when the app comes back to the foreground
 // shortcuts open "#checkin" / "#now" / "#trips" even when the app is already open
-window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","past","changes","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (["now","trips","local","family","past","changes","checkin"].includes(v)) { state.view = v; render(); window.scrollTo(0, 0); } });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !state.locked && blob) load(); });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();

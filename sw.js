@@ -1,5 +1,5 @@
 // Offline support: app shell from cache; trip data network-first with cached fallback.
-const CACHE = "trip-board-v34";
+const CACHE = "trip-board-v35";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-180.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
@@ -9,7 +9,7 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
-  if (url.pathname.includes("/view/")) return;  // the view-only copy has its own worker
+  if (url.pathname.includes("/view/") || url.pathname.includes("/alicia/")) return;  // copies have their own workers
   if (url.pathname.endsWith("trips.enc.json") || e.request.mode === "navigate") {
     // network first so updates show up; fall back to the last copy when offline
     e.respondWith(fetch(e.request).then(r => {
