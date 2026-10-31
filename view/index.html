@@ -440,6 +440,22 @@ const appHref = u => {
   return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=${app[1]};${back}`;
 };
 const hrefAttrs = u => { const h = appHref(u); return h === u ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(h)}"`; };
+// TEMPORARY: link formats to find the one the Gmail app opens on the exact email
+const gmTest = u => {
+  if (!ANDROID) return "";
+  const m = String(u).match(/authuser=([^#&]+).*thread-f:(\d+)/); if (!m) return "";
+  const acct = decodeURIComponent(m[1]), hex = BigInt(m[2]).toString(16), back = `S.browser_fallback_url=${encodeURIComponent("https://example.com/?gmail-test-failed")};end`;
+  const gm = (path, extra = "") => `intent://mail.google.com${path}#Intent;scheme=https;package=com.google.android.gm;${extra}${back}`;
+  const opts = [
+    ["A", gm(`/mail/u/0/#all/${hex}`)],
+    ["B", gm(`/mail/u/0/#inbox/${hex}`)],
+    ["C", gm(`/mail/u/${acct}/#all/${hex}`)],
+    ["D", `intent:///cv=${hex}/accountId=${acct}#Intent;scheme=googlegmail;package=com.google.android.gm;${back}`],
+    ["E", gm(`/mail/u/0/?ui=2&view=cv&th=${hex}`)],
+    ["F", `intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.android.gm;${back}`],
+  ];
+  return `<div style="width:100%;font-size:12px;margin-top:4px">Gmail test: ${opts.map(([k, v]) => `<a class="btn" style="padding:4px 10px" href="${esc(v)}">${k}</a>`).join(" ")}</div>`;
+};
 const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" ${hrefAttrs(href)}>${esc(label)} ↗</a>` : "";
 // "📞 Call" button: dials the number on a phone (restaurants, hotels, events)
 const callBtn = (phone, primary) => phone ? `<a class="btn${primary ? " primary" : ""}" href="tel:${esc(String(phone).replace(/[^+\d]/g, ""))}">📞 Call</a>` : "";
@@ -978,7 +994,7 @@ function segBlock(s) {
     ${s.source ? row("Booked via", esc(s.source)) : ""}${s.party ? row("Party", `<b>${s.party} ${s.party === 1 ? "person" : "people"}</b>`) : ""}${s.payment ? row("Paid", `<span class="paid${/^Nothing paid/.test(s.payment) ? " none" : ""}">${esc(s.payment)}</span>`) : ""}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
-    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${callBtn(s.phone, s.type === "activity" && !s.manageUrl)}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${callBtn(s.phone, s.type === "activity" && !s.manageUrl)}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") + gmTest(s.emailUrl) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
 }
 
 // "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
