@@ -200,6 +200,7 @@ header.top .clock,.who{color:var(--on-sky-muted)}
 .ft-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:17px}
 .ck-done.mini{padding:5px 8px;font-size:11px}
 .ck-done{display:inline-flex;align-items:center;font:700 13px/1 var(--body);padding:9px 12px;border-radius:999px;background:var(--good-soft);color:var(--good)}
+.paid{font-weight:700}.paid.none{color:var(--good)}
 .note.cancel{background:var(--surface-2);border-radius:10px;padding:8px 10px;margin:6px 0}
 .trip.work,.hero.work{position:relative}
 /* work trips: a full-width bar over the top of the photo */
@@ -943,7 +944,8 @@ function segOrDone(s) {
 }
 // Cancellation terms on a reservation: {deadline: ISO or null, fee, terms}. Warns when the free-cancel deadline is close.
 function cancelInfo(s) {
-  const c = s.cancellation; if (!c) return "";
+  const c = s.cancellation;
+  if (!c) return s.source ? `<div class="note cancel">Cancellation: no policy stated in the confirmation.</div>` : "";
   const t0 = Date.now(), dl = c.deadline ? ms(c.deadline) : null;
   let line;
   if (dl && dl > t0) line = `Free to cancel until <b>${DT(c.deadline)}</b>; after that ${esc(c.fee)}`;
@@ -966,7 +968,7 @@ function segBlock(s) {
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
   return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
-    ${s.source ? row("Booked via", esc(s.source)) : ""}${s.party ? row("Party", `<b>${s.party} ${s.party === 1 ? "person" : "people"}</b>`) : ""}
+    ${s.source ? row("Booked via", esc(s.source)) : ""}${s.party ? row("Party", `<b>${s.party} ${s.party === 1 ? "person" : "people"}</b>`) : ""}${s.payment ? row("Paid", `<span class="paid${/^Nothing paid/.test(s.payment) ? " none" : ""}">${esc(s.payment)}</span>`) : ""}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
     <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${callBtn(s.phone, s.type === "activity" && !s.manageUrl)}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
