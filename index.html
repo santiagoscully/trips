@@ -407,6 +407,7 @@ const APPS = [
   [/(^|\.)hyatt\.com$/, "com.Hyatt.hyt"],
   [/(^|\.)marriott\.com$/, "com.marriott.mrt"],
   [/(^|\.)ihg\.com$/, "com.ihg.apps.android"],
+  [/(^|\.)opentable\.com$/, "com.opentable"],
   [/(^|\.)flightradar24\.com$/, "com.flightradar24free"],
 ];
 const ANDROID = /Android/i.test(navigator.userAgent);
@@ -963,9 +964,10 @@ function segBlock(s) {
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
   return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
     <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
+    ${s.source ? row("Booked via", esc(s.source)) : ""}${s.party ? row("Party", `<b>${s.party} ${s.party === 1 ? "person" : "people"}</b>`) : ""}
     ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
-    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
+    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
 }
 
 // "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
@@ -1117,7 +1119,7 @@ function localComing() {
   const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== today).slice(0, 4);
   if (!items.length) return "";
   return `<section class="card" aria-label="Coming up nearby"><div class="eyebrow">Coming up nearby</div><ul class="next">
-    ${items.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${s.address ? `<br><a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
+    ${items.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.party ? `<br><span class="muted">${s.party} people${s.source ? ` · ${esc(s.source)}` : ""}</span>` : ""}${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${s.address ? `<br><a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
     <div class="btns"><a class="btn" href="#local">All local plans ›</a></div></section>`;
 }
 // Order the Now tab: today's local plans, then whichever comes first, the next local plan or the trip
