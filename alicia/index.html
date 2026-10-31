@@ -434,6 +434,8 @@ const appHref = u => {
 };
 const hrefAttrs = u => { const h = appHref(u); return h === u ? `href="${esc(u)}" target="_blank" rel="noopener"` : `href="${esc(h)}"`; };
 const link = (href, label, primary) => href ? `<a class="btn${primary ? " primary" : ""}" ${hrefAttrs(href)}>${esc(label)} ↗</a>` : "";
+// "📞 Call" button: dials the number on a phone (restaurants, hotels, events)
+const callBtn = (phone, primary) => phone ? `<a class="btn${primary ? " primary" : ""}" href="tel:${esc(String(phone).replace(/[^+\d]/g, ""))}">📞 Llamar</a>` : "";
 const copyBtn = v => `<button class="copy" data-copy="${esc(v)}">Copiar</button>`;
 const codeRow = (label, v) => v ? `<dt>${esc(label)}</dt><dd><span class="code">${esc(v)}</span>${copyBtn(v)}</dd>` : "";
 const row = (label, v) => v ? `<dt>${esc(label)}</dt><dd>${v}</dd>` : "";
@@ -731,7 +733,7 @@ function lodgingCard(s, label) {
       ${codeRow("Código de reserva", s.confirmation)}${row("Teléfono", s.phone ? `<span class="code">${esc(s.phone)}</span>${copyBtn(s.phone)}` : "")}
     </dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}
-    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !hotelCk(s))}${link(s.link, "Ver reserva")}</div>
+    ${s.onlineCheckin ? `<p class="note">${esc(s.onlineCheckin.note || "")}</p>` : ""}<div class="btns">${callBtn(s.phone)}${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${link(maps(s.address), "Open in Maps", !hotelCk(s))}${link(s.link, "Ver reserva")}</div>
   </section>`;
 }
 
@@ -968,7 +970,7 @@ function segBlock(s) {
     ${s.source ? row("Reservado por", esc(s.source)) : ""}${s.party ? row("Personas", `<b>${s.party}</b>`) : ""}
     ${s.address ? row("Dirección", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Código de reserva", s.confirmation)}${row("Teléfono", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
     ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
-    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Mapa") : ""}${link(s.link, "Ver reserva")}</div></div></div>`;
+    <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${callBtn(s.phone, s.type === "activity" && !s.manageUrl)}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Mapa") : ""}${link(s.link, "Ver reserva")}</div></div></div>`;
 }
 
 // "Leave Mon, Oct 19, 1:00 PM (SJC) · Back Fri, Oct 23, 1:11 PM (SJC)" from the first and last flights
@@ -1120,7 +1122,7 @@ function localComing() {
   const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== today).slice(0, 4);
   if (!items.length) return "";
   return `<section class="card" aria-label="Coming up nearby"><div class="eyebrow">Coming up nearby</div><ul class="next">
-    ${items.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.party ? `<br><span class="muted">${s.party} people${s.source ? ` · ${esc(s.source)}` : ""}</span>` : ""}${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${s.address ? `<br><a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
+    ${items.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.party ? `<br><span class="muted">${s.party} people${s.source ? ` · ${esc(s.source)}` : ""}</span>` : ""}${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}<br>${s.phone ? `<a class="btn mini" href="tel:${esc(s.phone.replace(/[^+\d]/g, ""))}">📞 Llamar</a> ` : ""}${s.address ? `<a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
     <div class="btns"><a class="btn" href="#local">All local plans ›</a></div></section>`;
 }
 // Order the Now tab: today's local plans, then whichever comes first, the next local plan or the trip
