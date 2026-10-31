@@ -425,6 +425,12 @@ const appHref = u => {
   // Google Maps understands these links itself, so open the exact place/route in it
   if (/(^|\.)google\.com$/.test(url.hostname) && url.pathname.startsWith("/maps"))
     return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=com.google.android.apps.maps;${back}`;
+  // Gmail: open the exact email in the Gmail app. The app wants the hex thread id (same number as thread-f).
+  if (url.hostname === "mail.google.com") {
+    const m = url.hash.match(/thread-f:(\d+)/);
+    const hash = m ? `#all/${BigInt(m[1]).toString(16)}` : url.hash;
+    return `intent://${url.host}${url.pathname}${url.search}${hash}#Intent;scheme=https;package=com.google.android.gm;${back}`;
+  }
   const app = APPS.find(([re]) => re.test(url.hostname));
   if (!app) return u;
   const swap = APP_LINK_SWAPS.find(([host, path]) => host.test(url.hostname) && path.test(url.pathname));
