@@ -292,6 +292,28 @@ footer .about summary{color:var(--muted)}
   .ends{font-size:14px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* status of each item, faded when done */
+.st{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.02em;vertical-align:middle}
+.st-done{background:#E3F1E7;color:#1E7B3C}.st-now{background:#FDE7D9;color:#B4400F}.st-next{background:#E1ECFA;color:#1D5FB8}
+.seg.st-done{opacity:.55}.seg.st-done:hover,.seg.st-done:focus-within{opacity:1}
+.day{display:flex;align-items:center;gap:6px;margin:14px 2px 6px;font-weight:700;font-size:13px;color:var(--muted)}
+.day.day-done{opacity:.6}
+details.more{margin:8px 0}details.more>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--accent,#1D5FB8);padding:6px 0}
+details.itin>summary,details.earlier>summary{cursor:pointer;font-weight:700;padding:10px 2px}
+details.earlier{border:1px dashed var(--line);border-radius:12px;padding:0 10px;margin:6px 0}
+/* Up next box */
+.card.upnext{border-left:5px solid #1D5FB8}.upnext h3{margin:4px 0 2px}
+.un-now{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);margin-bottom:8px}.un-now>span:nth-child(2){flex:1}
+/* seat map */
+.cabin{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;margin:10px 0}
+.sm{max-width:100%;height:auto;flex:none}.sm-body{fill:#F4F7FA;stroke:#B8C4D2;stroke-width:1.5}.sm-seat{fill:#DCE3EC}
+.sm-l{font-size:9px;fill:#7A8796}.sm-f{font-size:9px;font-weight:700;letter-spacing:.12em;fill:#7A8796}.sm-i{font-size:8.5px;font-weight:700;fill:#fff}
+.sm-side{flex:1;min-width:150px}.sm-list{list-style:none;margin:0;padding:0}
+.sm-list li{display:flex;gap:8px;align-items:flex-start;padding:3px 0;font-size:14px}.sm-list li.me b{text-decoration:underline}
+.sm-dot{flex:none;width:22px;height:22px;border-radius:50%;background:#D7263D;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.sm-approx{font-size:12px;opacity:.75}.noseat{color:#B4400F;font-weight:600}
+@media (prefers-color-scheme: dark){.sm-body{fill:#1E2733;stroke:#3A4757}.sm-seat{fill:#2E3A49}.st-done{background:#1F3A28;color:#8FD3A4}.st-now{background:#43281A;color:#F5B08A}.st-next{background:#1C2E47;color:#9CC3F5}}
 </style>
 
 </head>
@@ -621,58 +643,108 @@ const seatList = f => {
   if (!pax.some(p => p.seat)) return pax.length ? "Not assigned yet" : "";
   return pax.filter(p => p.seat).map(p => p.name === state.person ? `<b>${esc(p.seat)}</b>` : esc(p.seat)).join(", ");  // seat numbers only; yours first, in bold
 };
-// ---------- seat diagram: a simple top-down plane with the person's seat marked ----------
-// Cabin layouts (economy seat letters per side, last row) by aircraft; unknown planes fall back to the seat letter.
-const LAYOUTS = {
-  "Boeing 777-200": { groups: ["ABC", "DEFG", "JKL"], rows: 52 },
-  "Boeing 737 MAX 9": { groups: ["ABC", "DEF"], rows: 39 },
-  "Boeing 737": { groups: ["ABC", "DEF"], rows: 30 },
-  "Boeing 737-800": { groups: ["ABC", "DEF"], rows: 30 },
-};
-function seatInfo(seat, aircraft) {
-  const m = /^(\d+)([A-L])$/.exec((seat || "").trim()); if (!m) return null;
-  const row = +m[1], letter = m[2];
-  let lay = LAYOUTS[aircraft];
-  if (!lay) lay = { groups: "GHJKL".includes(letter) ? ["ABC", "DEFG", "JKL"] : ["ABC", "DEF"], rows: Math.max(30, row + 4) };
+// ---------- seat map: a small top-down cabin (front at the top) with everyone on the flight marked ----------
+// Approximate seat letters per section, by flight; other flights fall back to what the seat letters suggest.
+const FLIGHT_LAYOUTS = [
+  [/^UA(300|1947)\b/, ["ABC", "DEFG", "HJL"]],
+  [/^UA97(25|28)\b/, ["AC", "DEFG", "HK"]],
+  [/^(LX1956|EJU|U2)/, ["ABC", "DEF"]],
+  [/^CM/, ["AB", "EF"]],
+];
+const AIRCRAFT_ROWS = { "Boeing 777-200": 52, "Boeing 737 MAX 9": 39, "Boeing 737": 30, "Boeing 737-800": 30 };
+const SEAT_RE = /^(\d+)([A-L])$/;
+function layoutOf(f) {
+  const fn = String(f.flightNumber || "").toUpperCase().replace(/\s+/g, "");
+  const letters = (f.travelers || []).map(t => SEAT_RE.exec((t?.seat || "").trim())?.[2]).filter(Boolean);
+  const wide = letters.some(L => "GHJKL".includes(L));
+  let groups = (FLIGHT_LAYOUTS.find(([re]) => re.test(fn)) || [])[1] || (wide ? ["ABC", "DEFG", "HJL"] : ["ABC", "DEF"]);
+  if (letters.some(L => !groups.join("").includes(L))) groups = wide ? ["ABC", "DEFG", "HJKL"] : ["ABC", "DEF"];
+  return { groups, rows: AIRCRAFT_ROWS[f.aircraft] || 0 };
+}
+function seatInfo(seat, f) {
+  const m = SEAT_RE.exec((seat || "").trim()); if (!m) return null;
+  const row = +m[1], letter = m[2], lay = layoutOf(f);
   const gi = lay.groups.findIndex(g => g.includes(letter)); if (gi < 0) return null;
-  const g = lay.groups[gi], k = g.indexOf(letter);
+  const g = lay.groups[gi], k = g.indexOf(letter), rows = Math.max(lay.rows, row);
   const kind = (gi === 0 && k === 0) || (gi === lay.groups.length - 1 && k === g.length - 1) ? "window" : (k === 0 || k === g.length - 1) ? "aisle" : "middle";
   const side = gi === 0 ? "left side" : gi === lay.groups.length - 1 ? "right side" : "center section";
-  const where = row / lay.rows < 0.34 ? "near the front" : row / lay.rows < 0.67 ? "in the middle" : "near the back";
-  return { row, letter, lay, kind, side, where, rows: Math.max(lay.rows, row) };
+  // front/middle/back only when we know how many rows the plane has (or the seat is in the first rows)
+  const where = !lay.rows ? (row <= 6 ? "near the front" : "") : row / rows < 0.34 ? "near the front" : row / rows < 0.67 ? "in the middle" : "near the back";
+  return { row, letter, kind, side, where, desc: [kind, side, where].filter(Boolean).join(", ") };
 }
-function seatMap(si) {
-  const W = 330, H = 120, x0 = 62, x1 = 292, top = 38, bot = 82;
-  const letters = si.lay.groups.join(""), gaps = si.lay.groups.length - 1, slots = letters.length + gaps;
-  // seat A is on the passenger's left; with the nose pointing left that is the bottom of the drawing
-  const yOf = L => { let idx = 0; for (const [gi, g] of si.lay.groups.entries()) { const k = g.indexOf(L); if (k >= 0) return bot - 3 - (idx + k) * ((bot - top - 6) / (slots - 1)); idx += g.length + 1; } };
-  const xOf = r => x0 + (r - 1) * ((x1 - x0) / Math.max(1, si.rows - 1));
-  let dots = "";
-  for (let r = 1; r <= si.rows; r += 1) for (const L of letters) dots += `<circle cx="${xOf(r).toFixed(1)}" cy="${yOf(L).toFixed(1)}" r="1.3" fill="#C9D3DF"/>`;
-  const sx = xOf(si.row), sy = yOf(si.letter);
-  return `<svg class="seatmap" viewBox="0 0 ${W} ${H}" role="img" aria-label="Seat ${si.row}${si.letter}, ${si.kind}, ${si.side}, ${si.where}">
-    <path d="M300 60 L318 34 L326 34 L316 60 L326 86 L318 86 Z" fill="#E3E9F0"/>
-    <path d="M150 38 L190 4 L206 4 L196 38 Z M150 82 L190 116 L206 116 L196 82 Z" fill="#E3E9F0"/>
-    <path d="M58 34 H298 Q312 34 312 60 Q312 86 298 86 H58 Q20 86 12 60 Q20 34 58 34 Z" fill="#F4F7FA" stroke="#B8C4D2"/>
-    ${dots}<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="6" fill="#E0571B" stroke="#fff" stroke-width="2"/>
-    <text x="18" y="64" font-size="9" fill="#8A97A6">front</text>
-    <text x="${Math.min(sx, 290).toFixed(1)}" y="${sy < 60 ? 24 : 104}" font-size="11" font-weight="700" text-anchor="middle" fill="#E0571B">${si.row}${si.letter}</text>
-  </svg>`;
+const initials = n => first(n).slice(0, 2);
+// Everyone on the flight (also people on another booking), a red circle with initials on each seat, and the list beside it.
+function cabinMap(f) {
+  const pax = (f.travelers || []).map(t => typeof t === "string" ? { name: t } : t);
+  if (!pax.length) return "";
+  const seated = pax.map(p => ({ p, m: SEAT_RE.exec((p.seat || "").trim()) })).filter(x => x.m);
+  const none = pax.filter(p => !seated.some(x => x.p === p));
+  const noneLine = none.length ? `<p class="note noseat">No seat yet: ${none.map(p => esc(p.name)).join(", ")}</p>` : "";
+  if (!seated.length) return noneLine;
+  const { groups } = layoutOf(f), S = 20, A = 12, LBL = 20, PAD = 8;
+  const occ = {}; seated.forEach(({ p, m }) => { occ[m[1] + m[2]] = p; });
+  // only the rows around our seats; a "⋯" line where rows are skipped
+  const want = new Set(); seated.forEach(({ m }) => { for (let r = Math.max(1, +m[1] - 1); r <= +m[1] + 1; r += 1) want.add(r); });
+  const rows = [...want].sort((a, b) => a - b);
+  const xOf = {}; let x = PAD + LBL;
+  groups.forEach(g => { for (const L of g) { xOf[L] = x; x += S; } x += A; });
+  const W = x - A + PAD;
+  let y = 46, body = "", prev = null;
+  for (const L of groups.join("")) body += `<text x="${xOf[L] + S / 2}" y="40" class="sm-l" text-anchor="middle">${L}</text>`;
+  for (const r of rows) {
+    if (prev !== null && r > prev + 1) { body += `<text x="${W / 2}" y="${y + 11}" class="sm-l" text-anchor="middle">⋯ rows ${prev + 1}–${r - 1} ⋯</text>`; y += 16; }
+    body += `<text x="${PAD + LBL - 5}" y="${y + 14}" class="sm-l" text-anchor="end">${r}</text>`;
+    for (const L of groups.join("")) {
+      const p = occ[r + L], cx = xOf[L] + S / 2, cy = y + S / 2;
+      body += p ? `<circle cx="${cx}" cy="${cy}" r="9.5" fill="#D7263D"/><text x="${cx}" y="${cy + 3.2}" class="sm-i" text-anchor="middle">${esc(initials(p.name))}</text>`
+        : `<rect x="${xOf[L] + 2}" y="${y + 2}" width="${S - 4}" height="${S - 4}" rx="4" class="sm-seat"/>`;
+    }
+    y += S + 2; prev = r;
+  }
+  const Ht = y + 8;
+  const svg = `<svg class="sm" viewBox="0 0 ${W} ${Ht}" width="${W}" role="img" aria-label="Seat map: ${seated.map(({ p, m }) => `${esc(first(p.name))} ${m[0]}`).join(", ")}">
+    <path d="M2 ${Ht} V44 Q2 8 ${W / 2} 2 Q${W - 2} 8 ${W - 2} 44 V${Ht}" class="sm-body"/>
+    <text x="${W / 2}" y="22" class="sm-f" text-anchor="middle">FRONT</text>${body}</svg>`;
+  const list = `<ul class="sm-list">${seated.sort((a, b) => a.m[0].localeCompare(b.m[0], undefined, { numeric: true })).map(({ p, m }) => `<li${p.name === state.person ? ` class="me"` : ""}><span class="sm-dot">${esc(initials(p.name))}</span><span><b>${esc(p.name)}</b> <span class="code">${m[0]}</span>${p.booking && p.booking !== f.confirmation ? `<br><span class="muted">other booking ${esc(p.booking)}</span>` : ""}</span></li>`).join("")}</ul>`;
+  return `<div class="cabin">${svg}<div class="sm-side">${list}${noneLine}<p class="note sm-approx">Cabin layout is approximate.</p></div></div>`;
 }
+// Status of an item: "done" once its end time passes, "now" while it's happening, "next" for the next one in its trip.
+const segKey = s => s.id || `${s.type}-${s.start}`;
+const NEXT = new Set();
+function markNext(list) {
+  const t0 = now(), n = list.filter(s => s.start && ms(s.start) > t0).sort((a, b) => ms(a.start) - ms(b.start))[0];
+  if (n) NEXT.add(segKey(n));
+}
+const statusOf = s => { const t0 = now(); if (!s.start) return ""; if (s.end && t0 >= ms(s.end)) return "done"; if (t0 >= ms(s.start)) return "now"; return NEXT.has(segKey(s)) ? "next" : ""; };
+const STATUS_CHIP = { done: `<span class="st st-done">✓ Done</span>`, now: `<span class="st st-now">Now</span>`, next: `<span class="st st-next">Up next</span>` };
+const statusChip = s => STATUS_CHIP[statusOf(s)] || "";
+// Items grouped by local day; a day is done when everything in it is done.
+function byDay(list) {
+  const days = [];
+  for (const s of list.slice().sort((a, b) => ms(a.start) - ms(b.start))) {
+    const p = parts(ms(s.start), offMin(s.start)), k = `${p.y}-${String(p.mo + 1).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
+    let d = days[days.length - 1];
+    if (!d || d.k !== k) days.push(d = { k, label: DD(s.start), items: [] });
+    d.items.push(s);
+  }
+  return days;
+}
+const dayBlocks = days => days.map(d => { const done = d.items.every(s => statusOf(s) === "done");
+  return `<div class="day${done ? " day-done" : ""}"><span>${d.label}</span>${done ? STATUS_CHIP.done : ""}</div>${d.items.map(segOrDone).join("")}`; }).join("");
+const more = (s, inner) => inner.replace(/<dl class="kv">\s*<\/dl>/g, "").trim() ? `<details class="more" data-k="more-${esc(segKey(s))}"><summary>Full details</summary>${inner}</details>` : "";
 // Alicia's copy (CHECKIN_HELP): big, visual "what matters" block — times, seat, bags, wheelchair.
 function keyTiles(f, p) {
-  const si = seatInfo(p.seat, f.aircraft);
+  const si = seatInfo(p.seat, f);
   const wcs = { confirmed: ["ok", "Confirmed ✓"], requested: ["pend", "Requested, not confirmed yet"], "not requested": ["no", "Not requested"] }[p.wheelchair];
   return `<div class="keyinfo">
     <div class="kt-time"><div><span class="kt-l">Departs</span><b>${T(f.start)}</b><span>${DD(f.start)} · ${esc(f.from)}</span></div>
       <div class="kt-arrow" aria-hidden="true">✈</div>
       <div><span class="kt-l">Arrives</span><b>${T(f.end)}</b><span>${DD(f.end)} · ${esc(f.to)}</span></div></div>
     <div class="kt-grid">
-      <div class="kt"><span class="kt-l">💺 Seat</span><b class="kt-big">${esc(p.seat || "–")}</b>${si ? `<span>${si.kind}, ${si.side}, ${si.where}</span>` : ""}${p.seatNote ? `<span>${esc(p.seatNote)}</span>` : ""}</div>
+      <div class="kt"><span class="kt-l">💺 Seat</span><b class="kt-big">${esc(p.seat || "–")}</b>${si ? `<span>${si.desc}</span>` : ""}${p.seatNote ? `<span>${esc(p.seatNote)}</span>` : ""}</div>
       <div class="kt"><span class="kt-l">♿ Wheelchair</span>${wcs ? `<b class="kt-wc ${wcs[0]}">${wcs[1]}</b>` : `<b class="kt-wc no">–</b>`}</div>
       <div class="kt kt-wide"><span class="kt-l">🧳 Bags</span><span class="kt-bags">${esc(p.baggage || f.baggage || "–")}</span></div>
     </div>
-    ${si ? seatMap(si) : ""}
   </div>`;
 }
 // The selected person's seat, bags and wheelchair status on a flight
@@ -680,11 +752,10 @@ function myFlightInfo(f) {
   const p = (f.travelers || []).find(t => typeof t === "object" && t.name === state.person);
   if (!p) return "";
   if (CHECKIN_HELP) return keyTiles(f, p);
-  const si = seatInfo(p.seat, f.aircraft);
+  const si = seatInfo(p.seat, f);
   const wc = p.wheelchair ? ({ confirmed: `<span class="wc ok">♿ Wheelchair confirmed ✓</span>`, requested: `<span class="wc pend">♿ Wheelchair requested, not confirmed yet</span>`, "not requested": `<span class="wc no">♿ No wheelchair requested on this booking</span>` }[p.wheelchair] || "") : "";
   return `<div class="myseat">
-    ${p.seat ? `<div><b>${state.person === MAIN ? "Your seat" : `${esc(first(p.name))}'s seat`}: ${esc(p.seat)}</b>${p.seatNote ? ` · ${esc(p.seatNote)}` : ""}${si ? `<span class="muted"> · ${si.kind}, ${si.side}, ${si.where}${f.aircraft ? ` (${esc(f.aircraft)})` : ""}</span>` : ""}</div>` : ""}
-    ${si ? seatMap(si) : ""}
+    ${p.seat ? `<div><b>${state.person === MAIN ? "Your seat" : `${esc(first(p.name))}'s seat`}: ${esc(p.seat)}</b>${p.seatNote ? ` · ${esc(p.seatNote)}` : ""}${si ? `<span class="muted"> · ${si.desc}${f.aircraft ? ` (${esc(f.aircraft)})` : ""}</span>` : ""}</div>` : ""}
     ${p.baggage ? `<div class="note">🧳 ${esc(p.baggage)}</div>` : ""}${wc}</div>`;
 }
 function ckHelper(f) {
@@ -713,7 +784,7 @@ function flightTopCard(f) {
     <div class="eyebrow">${landed ? "Just landed" : flying ? "In the air" : "Your flight"}</div>
     <div class="ft-head">${icon(f)}${logo(brandOf(f))}<b>${esc(f.airline.name)} ${esc(f.flightNumber)}</b><span class="muted">${esc(f.from)} → ${esc(f.to)}</span>${isCheckedIn(f) ? `<span class="ck-done mini">✓ Checked in</span>` : ""}</div>
     <dl class="kv">${row("Departs", `${DT(f.start)} · ${esc(apName(f.from))}${termGate(f.departure) ? ` · ${esc(termGate(f.departure))}` : ""}`)}${row("Arrives", `${arrives(f)}${termGate(f.arrival) ? ` · ${esc(termGate(f.arrival))}` : ""}`)}${row(seatList(f).includes(",") ? "Seats" : "Seat", seatList(f))}${row("Bags", f.baggage ? esc(f.baggage) : "")}${(flying || landed) ? row("Baggage claim", `${f.arrival?.carousel ? `<b>Carousel ${esc(f.arrival.carousel)}</b> · ` : ""}${esc(f.arrival?.bags || "")}`) : ""}${codeRow("Confirmation", f.confirmation)}</dl>
-    ${myFlightInfo(f)}${ckHelper(f)}${leave}
+    ${myFlightInfo(f)}${cabinMap(f)}${ckHelper(f)}${leave}
     <div class="btns">${link(f.airline.manage, "Manage reservation", true)}${link(status(f), "Flightradar24")}${ckOpen && !isCheckedIn(f) ? ckLink(f, f.airline.checkin, "Check in") + ckToggle(f) : ""}</div>
   </section>`;
 }
@@ -745,21 +816,21 @@ function segLabel(s) {
   return s.title;
 }
 
-function renderNow() {
+// Now tab for one trip: what's happening, the pinned flight, where you're staying, then the trip day by day.
+// With no trip, a short card about the next one.
+function renderNow(trip, nextTrip) {
   const t0 = now();
-  const active = tripsFor(state.person).filter(t => ms(t.start) - 3 * D <= t0 && t0 <= ms(t.end) + 12 * H);
-  let html = previewControls();
-  if (!active.length) {
-    const next = tripsFor(state.person).find(t => ms(t.start) > t0);
-    if (!next) return html + `<div class="empty">No upcoming trips.</div>`;
+  let html = "";
+  if (!trip) {
+    const next = nextTrip;
+    if (!next) return `<div class="empty">No upcoming trips.</div>`;
     const firstAct = actionsFor(next).filter(a => a.k !== "stay").sort((a, b) => a.from - b.from)[0];
-    html += `<section class="hero"><div class="hero-head calm"><div class="eyebrow">No trip right now</div>
-      <h2>Next: ${esc(next.title)}</h2><p class="sub">${rangeStr(next.start, next.end)} · starts ${rel(ms(next.start) - t0)}</p></div>
+    return `<section class="hero"><div class="hero-head calm"><div class="eyebrow">Your next trip</div>
+      <h2>${esc(next.title)}</h2><p class="sub">${rangeStr(next.start, next.end)} · starts ${rel(ms(next.start) - t0)}</p></div>
       <div class="hero-body">${firstAct ? `<p class="note">First thing to do: <b>${esc(actionCard(firstAct, next).title.replace(/<[^>]+>/g, ""))}</b> from ${when(firstAct.from, firstAct.s.start)}.</p>` : ""}
-      ${(next.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}</div></section>`;
-    return html;
+      ${(next.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}<div class="btns"><a class="btn" href="#trips" data-open-trip="${esc(next.id)}">See the whole trip ›</a></div></div></section>`;
   }
-  for (const trip of active) {
+  {
     const acts = actionsFor(trip);
     const live = acts.filter(a => a.from <= t0 && t0 < a.to).sort((a, b) => b.p - a.p);
     let primary = live[0];
@@ -796,14 +867,49 @@ function renderNow() {
     // The pinned flight card above already covers the flight; the stay card stays until 2 h after checkout.
     if (st && !(flyFirst && !stayNow)) html += lodgingCard(st, stayNow ? "Where you're staying" : "Where you're staying next");
     else if (flyFirst && !topFlight) html += flightNowCard(nextFlight);
-    const nextSegs = withRides(trip).filter(s => ms(s.start) > t0).slice(0, 5);
-    if (nextSegs.length) html += `<section class="card"><div class="eyebrow">Next in this trip</div><ul class="next">
-      ${nextSegs.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.type === "ride" ? s.title : segLabel(s))}</b>${s.type === "flight" ? `<br><span class="muted">Arrives ${arrives(s)}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}${quickBtn(s) ? `<br>${quickBtn(s)}` : ""}${s.type === "ride" ? `<br><a class="btn mini" ${hrefAttrs(uber(s.toAddr, s.to))}>Open Uber ↗</a>` : ""}</span></li>`).join("")}</ul></section>`;
+    html += tripDays(trip);
     if ((trip.watch || []).length) html += trip.watch.map(w => `<div class="flag">${esc(w)}</div>`).join("");
   }
   return html;
 }
-
+// The trip day by day, opened at today: earlier days fold into one line you can open (or collapse the whole thing).
+function tripDays(trip) {
+  const t0 = now(), days = byDay(withRides(trip));
+  const ref = trip.segments.find(s => ms(s.start) >= t0)?.start || trip.segments[trip.segments.length - 1]?.start || trip.start;
+  const tp = parts(t0, offMin(ref)), today = `${tp.y}-${String(tp.mo + 1).padStart(2, "0")}-${String(tp.d).padStart(2, "0")}`;
+  const earlier = days.filter(d => d.k < today), rest = days.filter(d => d.k >= today);
+  return `<details class="itin" open data-k="itin-${esc(trip.id)}"><summary>${esc(trip.title)}, day by day</summary>
+    ${earlier.length ? `<details class="earlier" data-k="earlier-${esc(trip.id)}"><summary>Earlier in this trip · ${earlier.length} ${earlier.length === 1 ? "day" : "days"}</summary>${dayBlocks(earlier)}</details>` : ""}
+    ${rest.length ? dayBlocks(rest) : `<p class="note">Everything in this trip is done.</p>`}</details>`;
+}
+// "in 2 h 30 m"
+const inHM = d => { const m = Math.max(0, Math.round(d / M)), dd = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
+  return `in ${dd ? `${dd} d ${hh} h` : hh ? `${hh} h ${mm} m` : `${mm} m`}`; };
+// Top of Now: what's happening right now and the next flight / check-in / transfer / event, with a button to jump to it.
+function upNextBox(trip, locals) {
+  const t0 = now(), all = trip ? withRides(trip) : [];
+  // only your own room when the trip has rooms for different people
+  const myRooms = all.filter(s => s.type === "lodging" && (s.travelers || []).includes(state.person));
+  const ev = [], segs = all.filter(s => s.type !== "lodging" || !myRooms.length || myRooms.includes(s));
+  const add = (s, t, label) => { if (t > t0) ev.push({ s, t, label }); };
+  const name = s => s.type === "flight" ? `${s.airline.name} ${s.flightNumber} · ${s.from} → ${s.to}` : s.title;
+  for (const s of segs) {
+    if (s.type === "lodging" && !s.home) { add(s, ms(s.start), `Check in: ${s.title}`); add(s, ms(s.end), `Check out: ${s.title}`); }
+    else if (s.type === "car") { add(s, ms(s.start), `Pick up: ${s.title}`); add(s, ms(s.end), `Return: ${s.title}`); }
+    else add(s, ms(s.start), name(s));
+  }
+  for (const s of locals) add(s, ms(s.start), s.title);
+  ev.sort((a, b) => a.t - b.t);
+  const live = [...segs.filter(s => s.type !== "lodging" && s.type !== "car"), ...locals].filter(s => s.end && ms(s.start) <= t0 && t0 < ms(s.end));
+  const n = ev[0];
+  if (!n && !live.length) return "";
+  const go = (s, label, primary) => `<button class="btn${primary ? " primary" : " mini"}" data-goto="seg-${esc(segKey(s))}">${label}</button>`;
+  return `<section class="card upnext" aria-label="Up next">
+    ${live.map(s => `<div class="un-now">${STATUS_CHIP.now}<span><b>${icon(s)}${esc(name(s))}</b><br><span class="muted">until ${T(s.end)}</span></span>${go(s, "Show ↓")}</div>`).join("")}
+    ${n ? `<div class="eyebrow">Up next · ${inHM(n.t - t0)}</div><h3>${icon(n.s)}${logo(brandOf(n.s))}${esc(n.label)}</h3>
+      <p class="sub">${when(n.t, n.s.start)}${n.s.type === "flight" ? ` · arrives ${arrives(n.s)}` : n.s.address && n.s.type !== "flight" ? ` · ${esc(n.s.address.split(",")[0])}` : ""}</p>
+      <div class="btns">${go(n.s, "Go to it ↓", true)}</div>` : ""}</section>`;
+}
 function previewControls() {
   // based on your next flight that isn't done yet (today's flight home, not the trip's first flight)
   const f = tripsFor(state.person).flatMap(t => t.segments).filter(s => s.type === "flight" && doneAt(s) > Date.now())
@@ -918,11 +1024,11 @@ function withRides(trip) {
   return out;
 }
 function rideBlock(r) {
-  if (r.plan === "family") return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · Family ride</span>
+  if (r.plan === "family") return `<div class="seg ride st-${statusOf(r) || "later"}" id="seg-${esc(segKey(r))}"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · Family ride${statusChip(r)}</span>
     <h4>${r.dir === "in" ? "Family picks you up" : "Family drives you to the airport"}</h4>
     <p class="note">${esc(r.fromLabel)} → ${esc(r.to)} · around ${T(r.start)}</p>${r.planNote ? `<p class="note">• ${esc(r.planNote)}</p>` : ""}
     <div class="btns">${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
-  return `<div class="seg ride"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · ${logo(brandOf(r))}Uber</span>
+  return `<div class="seg ride st-${statusOf(r) || "later"}" id="seg-${esc(segKey(r))}"><div class="seg-main"><span class="seg-type">${icon(r)}Getting there · ${logo(brandOf(r))}Uber${statusChip(r)}</span>
     <h4>${r.plan === "uber" ? esc(r.title) : "No car booked: take an Uber"}</h4>
     <p class="note">${esc(r.fromLabel)} → ${esc(r.to)}${r.home && !r.plan ? " (or a family pickup)" : ""} · around ${T(r.start)}</p>
     <div class="btns">${link(uber(r.toAddr, r.to), "Open Uber", true)}${link(directions(r.from, r.toAddr), "Directions")}</div></div></div>`;
@@ -940,9 +1046,9 @@ const doneAt = s => {
   return ms(s.end);
 };
 function segOrDone(s) {
-  if (!s.end || doneAt(s) > Date.now()) return segBlock(s);
+  if (!s.end || doneAt(s) > now()) return segBlock(s);
   const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
-  return `<details class="seg-done"><summary><span class="done-chip">✓ Done</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
+  return `<details class="seg-done" data-k="done-${esc(segKey(s))}" id="seg-${esc(segKey(s))}"><summary><span class="done-chip">✓ Done</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
 }
 // Cancellation terms on a reservation: {deadline: ISO or null, fee, terms}. Warns when the free-cancel deadline is close.
 function cancelInfo(s) {
@@ -960,19 +1066,24 @@ function segBlock(s) {
   if (s.type === "ride") return rideBlock(s);
   if (s.type === "flight") {
     const dur = ms(s.end) - ms(s.start), hh = Math.floor(dur / H), mm = Math.round((dur % H) / M);
-    return `<div class="seg branded"${brandStyle(s)}><div class="seg-main"><span class="seg-type">${icon(s)}Flight · ${logo(brandOf(s))}${esc(s.airline.name)} ${esc(s.flightNumber)}</span>
+    return `<div class="seg branded st-${statusOf(s) || "later"}" id="seg-${esc(segKey(s))}"${brandStyle(s)}><div class="seg-main"><span class="seg-type">${icon(s)}Flight · ${logo(brandOf(s))}${esc(s.airline.name)} ${esc(s.flightNumber)}${statusChip(s)}</span>
       <div class="route"><div><div class="ap">${esc(s.from)}</div><div class="t">${DD(s.start)}<br>${T(s.start)}<br><span class="tz">${esc(apName(s.from))} time</span>${termGate(s.departure) ? `<br><span class="tz">${esc(termGate(s.departure))}</span>` : ""}</div></div>
       <div class="mid">${hh}h ${mm}m<br>✈</div>
       <div class="r"><div class="ap">${esc(s.to)}</div><div class="t">${DD(s.end)}<br><b>Arrives ${T(s.end)}</b><br><span class="tz">${esc(apName(s.to))} time</span>${termGate(s.arrival) ? `<br><span class="tz">${esc(termGate(s.arrival))}</span>` : ""}</div></div></div></div>
-      <div class="stub">${myFlightInfo(s)}${soloGuide(s)}${ckHelper(s)}<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Cabin", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}</dl>${paxList(s.travelers)}${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${notes(s.notes)}
+      <div class="stub">${myFlightInfo(s)}${cabinMap(s)}${soloGuide(s)}${ckHelper(s)}${notes(s.notes)}${more(s, `<dl class="kv">${codeRow("Confirmation", s.confirmation)}${row("Class", esc(s.cabin))}${row("Bags", s.baggage ? esc(s.baggage) : "")}${row("Refundable", esc(s.refundable))}${row("Aircraft", esc(s.aircraft))}</dl>${s.departure?.checkin ? `<p class="note">• ${esc(s.departure.checkin)}</p>` : ""}${s.arrival?.bags ? `<p class="note">• ${esc(s.arrival.bags)}</p>` : ""}`)}
       <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
-  return `<div class="seg branded"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}</span><h4>${esc(s.title)}</h4>
-    <dl class="kv">${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}
-    ${s.source ? row("Booked via", esc(s.source)) : ""}${s.party ? row("Party", `<b>${s.party} ${s.party === 1 ? "person" : "people"}</b>`) : ""}${s.payment ? row("Paid", `<span class="paid${/^Nothing paid/.test(s.payment) ? " none" : ""}">${esc(s.payment)}</span>`) : ""}
-    ${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}</dl>
-    ${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
+  // hotels, transfers and cars: the basics on the card, the rest one tap away ("Full details")
+  const tap = (s.type === "lodging" && !s.home) || s.type === "transfer" || s.type === "car";
+  const when2 = `${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}`;
+  const info = `
+    ${s.source ? row("Booked via", esc(s.source)) : ""}${s.party ? row("Party", `<b>${s.party} ${s.party === 1 ? "person" : "people"}</b>`) : ""}${s.payment ? row("Paid", `<span class="paid${/^Nothing paid/.test(s.payment) ? " none" : ""}">${esc(s.payment)}</span>`) : ""}${row("Refundable", esc(s.refundable))}${row("Still to pay", s.feesDue ? `<b>${esc(s.feesDue)}</b>` : "")}
+    ${!tap && s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}`;
+  const extra = `${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}`;
+  return `<div class="seg branded st-${statusOf(s) || "later"}" id="seg-${esc(segKey(s))}"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}${statusChip(s)}</span><h4>${esc(s.title)}</h4>
+    ${tap ? `<dl class="kv">${when2}${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}</dl>${more(s, `<dl class="kv">${info}</dl>${extra}`)}` : `<dl class="kv">${when2}${info}</dl>${extra}`}
+    ${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
     <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${callBtn(s.phone, s.type === "activity" && !s.manageUrl)}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
 }
 
@@ -1071,14 +1182,14 @@ function renderTrips(past) {
     const p = parts(ms(t.start), offMin(t.start)), mk = `${MO[p.mo]} ${p.y}`;
     if (mk !== lastMonth) { html += `<div class="month">${["January","February","March","April","May","June","July","August","September","October","November","December"][p.mo]} ${p.y}</div>`; lastMonth = mk; }
     const soon = !past && ms(t.start) - t0 < 7 * D;
-    html += `<details class="trip${t.work ? " work" : ""}" style="--tc:${t.work ? "#4285F4" : TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
+    html += `<details class="trip${t.work ? " work" : ""}" data-k="trip-${esc(t.id)}" style="--tc:${t.work ? "#4285F4" : TRIP_COLORS[i % TRIP_COLORS.length]}"><summary>
       ${workRibbon(t)}${tripPhoto(t)}
       <div class="trip-top"><h3>${esc(t.title)}</h3><span class="chev" aria-hidden="true">›</span></div>
       <div class="muted">${esc(t.place)}</div>
       <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentative</span>` : ""}${CHECKIN_HELP && state.extras?.assistCard && !past ? (assistCovers(t) ? `<span class="chip ins-ok">🛡️ Covered</span>` : `<span class="chip ins-no">🛡️ Not covered</span>`) : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
-      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${withRides(t).map(segOrDone).join("")}</div></details>`;
+      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${dayBlocks(byDay(withRides(t)))}</div></details>`;
   });
   return html;
 }
@@ -1113,29 +1224,42 @@ function renderLocal() {
 }
 // On the Now tab: today's local plans, so tonight's dinner or movie is one glance away
 function localToday() {
-  const t0 = Date.now(), today = new Date().toDateString();
+  const t0 = now(), today = new Date(t0).toDateString();
   const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() === today);
   if (!items.length) return "";
   return `<section class="card" aria-label="Today nearby"><div class="eyebrow">Today nearby</div>${items.map(segBlock).join("")}</section>`;
 }
 
 // Now tab: the next local plans after today (dinners, movies, shows, events), in time order
-function localComing() {
-  const t0 = Date.now(), today = new Date().toDateString();
-  const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== today).slice(0, 4);
+function localComing(skip) {
+  const t0 = now(), today = new Date(t0).toDateString();
+  const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== today && s !== skip).slice(0, 4);
   if (!items.length) return "";
   return `<section class="card" aria-label="Coming up nearby"><div class="eyebrow">Coming up nearby</div><ul class="next">
-    ${items.map(s => `<li><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.party ? `<br><span class="muted">${s.party} people${s.source ? ` · ${esc(s.source)}` : ""}</span>` : ""}${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}<br>${s.phone ? `<a class="btn mini" href="tel:${esc(s.phone.replace(/[^+\d]/g, ""))}">📞 Call</a> ` : ""}${s.address ? `<a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
+    ${items.map(s => `<li id="seg-${esc(segKey(s))}"><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.party ? `<br><span class="muted">${s.party} people${s.source ? ` · ${esc(s.source)}` : ""}</span>` : ""}${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}<br>${s.phone ? `<a class="btn mini" href="tel:${esc(s.phone.replace(/[^+\d]/g, ""))}">📞 Call</a> ` : ""}${s.address ? `<a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
     <div class="btns"><a class="btn" href="#local">All local plans ›</a></div></section>`;
 }
-// Order the Now tab: today's local plans, then whichever comes first, the next local plan or the trip
+// What Now opens on (Santiago's rules):
+// - on a trip (its first flight or check-in has started, until 12 h after its last item): that trip, at today;
+// - a trip starting within 48 h: the trip, unless a local plan comes before it; then that plan first, the trip after;
+// - otherwise: the upcoming local plans and a card about the next trip.
+// The "Up next" box always comes first.
+const lastEnd = t => Math.max(ms(t.end), ...t.segments.filter(s => s.end).map(s => ms(s.end)));
 function nowPage() {
-  const t0 = Date.now(), coming = localComing();
-  const firstLocal = localFor(state.person).find(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== new Date().toDateString());
-  const trips = tripsFor(state.person).filter(t => ms(t.end) + 12 * H >= t0);
-  const tripActive = trips.some(t => ms(t.start) - 3 * D <= t0);
-  const localFirst = firstLocal && !tripActive && (!trips.length || ms(firstLocal.start) < ms(trips[0].start));
-  return localToday() + (localFirst ? coming + renderNow() : renderNow() + coming);
+  const t0 = now();
+  const trips = tripsFor(state.person).filter(t => lastEnd(t) + 12 * H >= t0).sort((a, b) => ms(a.start) - ms(b.start));
+  const onTrip = trips.find(t => ms(t.start) <= t0), next = trips.find(t => ms(t.start) > t0);
+  const soon = !onTrip && next && ms(next.start) - 48 * H <= t0 ? next : null;
+  const locals = localFor(state.person).filter(s => doneAt(s) > t0).sort((a, b) => ms(a.start) - ms(b.start));
+  let html = upNextBox(onTrip || next, locals);
+  if (onTrip) html += renderNow(onTrip) + localToday() + localComing();
+  else if (soon) {
+    const before = locals.find(s => ms(s.start) < ms(soon.start));
+    const isToday = before && new Date(ms(before.start)).toDateString() === new Date(t0).toDateString();
+    html += before ? localToday() + (isToday ? "" : `<section class="card" aria-label="Before your trip"><div class="eyebrow">Before your trip</div>${segBlock(before)}</section>`) + localComing(before) + renderNow(soon)
+      : renderNow(soon) + localToday() + localComing();
+  } else html += localToday() + localComing() + renderNow(null, next);
+  return html + previewControls();
 }
 
 // Each check (daily or on request) is a run: {at, kind, summary, changes:[{type: added|changed|removed|note, text, tripId}]}, newest first.
@@ -1212,8 +1336,15 @@ function render() {
   const opts = people.map(p => `<option value="${esc(p)}"${p === state.person ? " selected" : ""}>${esc(p)}${p === MAIN ? " (me)" : ""} · ${tripsFor(p).filter(t => ms(t.end) >= Date.now()).length} upcoming</option>`).join("");
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; }
   sel.value = state.person;
+  // which item is "Up next" in each trip and in the local plans
+  NEXT.clear(); tripsFor(state.person).forEach(t => markNext(withRides(t))); markNext(localFor(state.person));
   const body = state.view === "now" ? nowPage() : state.view === "checkin" ? renderCheckin() : state.view === "local" ? renderLocal() : state.view === "family" ? renderFamily() : state.view === "assist" ? renderAssist() : state.view === "changes" ? `<div class="view-title">Change history</div>` + renderChanges() : (state.view === "past" ? `<div class="view-title">Past trips</div>` : "") + renderTrips(state.view === "past");
-  app.innerHTML = body + renderBanner();  // recent changes sit at the bottom (user preference); full history is under "Change history"
+  // keep sections the way the viewer left them (open or closed) when the page refreshes itself
+  const keep = {};
+  if (state.renderedView === state.view) app.querySelectorAll("details[data-k]").forEach(d => { keep[d.dataset.k] = d.open; });
+  state.renderedView = state.view;
+  app.innerHTML = body + renderBanner();
+  app.querySelectorAll("details[data-k]").forEach(d => { if (d.dataset.k in keep) d.open = keep[d.dataset.k]; });  // recent changes sit at the bottom (user preference); full history is under "Change history"
   const seen = new Set();
   app.querySelectorAll("a[data-ck]").forEach(a => { if (seen.has(a.dataset.ck)) a.remove(); else seen.add(a.dataset.ck); });
 }
@@ -1234,6 +1365,25 @@ document.addEventListener("click", e => {
   }
   const tab = e.target.closest(".tab, .footlink");
   if (tab) { state.view = tab.dataset.view; try { localStorage.setItem("tbv-view", state.view); } catch (_) {} render(); window.scrollTo(0, 0); return; }
+  // "Go to it": open whatever folds the item, then scroll to it (looks in Trips or Local if it isn't on this page)
+  const go = e.target.closest("[data-goto]");
+  if (go) {
+    const find = () => document.getElementById(go.dataset.goto);
+    let el = find();
+    for (const v of el ? [] : ["trips", "local"]) { state.view = v; render(); el = find(); if (el) break; }
+    if (!el) return;
+    for (let d = el.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
+    if (el.tagName === "DETAILS") el.open = true;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  const ot = e.target.closest("[data-open-trip]");
+  if (ot) {
+    e.preventDefault(); state.view = "trips"; render();
+    const d = document.querySelector(`details[data-k="trip-${CSS.escape(ot.dataset.openTrip)}"]`);
+    if (d) { d.open = true; d.scrollIntoView({ behavior: "smooth", block: "start" }); }
+    return;
+  }
   const cp = e.target.closest(".copy");
   if (cp) {
     const v = cp.dataset.copy;
@@ -1257,7 +1407,13 @@ function selectText(btn) {
   const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
 }
 
-tick(); setInterval(() => { tick(); if (!state.override && state.view === "now") render(); }, 60e3);
+// Re-check every minute: statuses, "Up next" and what's done all follow the clock.
+tick(); setInterval(() => {
+  tick();
+  const a = document.activeElement;
+  if (state.override || state.locked || (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))) return;
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+}, 60e3);
 render();
 
 // ---------- encrypted data: AES-GCM, key from PBKDF2(passphrase) ----------
