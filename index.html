@@ -318,6 +318,13 @@ details.earlier{border:1px dashed var(--line);border-radius:12px;padding:0 10px;
 .bag{display:grid;gap:2px;padding:9px 12px;border-radius:10px;margin:8px 0;font-size:14px;line-height:1.35}
 .bag b{font-size:15px}.bag-ok{background:var(--good-soft)}.bag-ok b{color:var(--good)}
 .bag-pay{background:var(--bad-soft);border:1px solid var(--bad)}.bag-pay b{color:var(--bad)}
+
+/* reservation: people + how it was booked */
+.resv{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 0 8px;font-size:15px}
+.resv span{background:var(--surface-2);border-radius:8px;padding:4px 10px}
+/* boarding pass */
+details.bp{margin:8px 0}details.bp>summary{cursor:pointer;display:inline-block;font-weight:700;padding:10px 16px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
+details.bp img{display:block;width:100%;max-width:760px;margin-top:10px;border-radius:10px;background:#fff}
 </style>
 
 </head>
@@ -769,16 +776,17 @@ function keyTiles(f, p) {
     </div>
   </div>`;
 }
+const bpBlock = p => p && p.boardingPass ? `<details class="bp" data-k="bp-${esc(p.name)}"><summary>🎫 Show boarding pass</summary><img src="${p.boardingPass}" alt="Boarding pass for ${esc(p.name)}"></details>` : "";
 // The selected person's seat, bags and wheelchair status on a flight
 function myFlightInfo(f) {
   const p = (f.travelers || []).find(t => typeof t === "object" && t.name === state.person);
   if (!p) return "";
-  if (CHECKIN_HELP) return keyTiles(f, p);
+  if (CHECKIN_HELP) return bpBlock(p) + keyTiles(f, p);
   const si = seatInfo(p.seat, f);
   const wc = p.wheelchair ? ({ confirmed: `<span class="wc ok">♿ Wheelchair confirmed ✓</span>`, requested: `<span class="wc pend">♿ Wheelchair requested, not confirmed yet</span>`, "not requested": `<span class="wc no">♿ No wheelchair requested on this booking</span>` }[p.wheelchair] || "") : "";
   return `<div class="myseat">
     ${p.seat ? `<div><b>${state.person === MAIN ? "Your seat" : `${esc(first(p.name))}'s seat`}: ${esc(p.seat)}</b>${p.seatNote ? ` · ${esc(p.seatNote)}` : ""}${si ? `<span class="muted"> · ${si.desc}${f.aircraft ? ` (${esc(f.aircraft)})` : ""}</span>` : ""}</div>` : ""}
-    ${p.baggage && !bagsOf(f, p) ? `<div class="note">🧳 ${esc(p.baggage)}</div>` : ""}${wc}</div>`;
+    ${bpBlock(p)}${p.baggage && !bagsOf(f, p) ? `<div class="note">🧳 ${esc(p.baggage)}</div>` : ""}${wc}</div>`;
 }
 function ckHelper(f) {
   if (!CHECKIN_HELP) return "";
@@ -929,7 +937,7 @@ function upNextBox(trip, locals) {
   return `<section class="card upnext" aria-label="Up next">
     ${live.map(s => `<div class="un-now">${STATUS_CHIP.now}<span><b>${icon(s)}${esc(name(s))}</b><br><span class="muted">until ${T(s.end)}</span></span>${go(s, "Show ↓")}</div>`).join("")}
     ${n ? `<div class="eyebrow">Up next · ${inHM(n.t - t0)}</div><h3>${icon(n.s)}${logo(brandOf(n.s))}${esc(n.label)}</h3>
-      <p class="sub">${when(n.t, n.s.start)}${n.s.type === "flight" ? ` · arrives ${arrives(n.s)}` : n.s.address && n.s.type !== "flight" ? ` · ${esc(n.s.address.split(",")[0])}` : ""}</p>
+      <p class="sub">${when(n.t, n.s.start)}${n.s.party ? ` · 👥 ${n.s.party}` : ""}${n.s.type === "flight" ? ` · arrives ${arrives(n.s)}` : n.s.address && n.s.type !== "flight" ? ` · ${esc(n.s.address.split(",")[0])}` : ""}</p>
       <div class="btns">${go(n.s, "Go to it ↓", true)}</div>` : ""}</section>`;
 }
 function previewControls() {
@@ -1096,14 +1104,17 @@ function segBlock(s) {
       <div class="btns">${isCheckedIn(s) ? "" : ckLink(s, s.airline.checkin, "Check in", true)}${Date.now() >= ms(s.start) - (s.airline.checkinHours || 24) * H && Date.now() < ms(s.start) ? ckToggle(s) : ""}${link(s.airline.manage, `Manage on ${s.airline.name}`)}${link(status(s), "Flightradar24")}</div></div></div>`;
   }
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
-  // hotels, transfers and cars: the basics on the card, the rest one tap away ("Full details")
+  // Reservations: how many people and how it was booked, big and right under the name
+const bookedHow = src => /phone/i.test(src) ? "by phone" : /^email/i.test(src) ? "by email with the restaurant" : `on ${src}`;
+const resvLine = s => s.party || s.source ? `<div class="resv">${s.party ? `<span>👥 <b>${s.party} ${s.party === 1 ? "person" : "people"}</b></span>` : ""}${s.source ? `<span>📝 Booked ${esc(bookedHow(s.source))}</span>` : ""}</div>` : "";
+// hotels, transfers and cars: the basics on the card, the rest one tap away ("Full details")
   const tap = (s.type === "lodging" && !s.home) || s.type === "transfer" || s.type === "car";
   const when2 = `${row(s.home ? "Arrive" : s.type === "lodging" ? "Check-in" : "Starts", DT(s.start))}${row(s.home ? "Leave" : s.type === "lodging" ? "Check-out" : "Ends", DT(s.end))}`;
   const info = `
-    ${s.source ? row("Booked via", esc(s.source)) : ""}${s.party ? row("Party", `<b>${s.party} ${s.party === 1 ? "person" : "people"}</b>`) : ""}${s.payment ? row("Paid", `<span class="paid${/^Nothing paid/.test(s.payment) ? " none" : ""}">${esc(s.payment)}</span>`) : ""}${row("Refundable", esc(s.refundable))}${row("Still to pay", s.feesDue ? `<b>${esc(s.feesDue)}</b>` : "")}
+    ${s.payment ? row("Paid", `<span class="paid${/^Nothing paid/.test(s.payment) ? " none" : ""}">${esc(s.payment)}</span>`) : ""}${row("Refundable", esc(s.refundable))}${row("Still to pay", s.feesDue ? `<b>${esc(s.feesDue)}</b>` : "")}
     ${!tap && s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}`;
   const extra = `${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}`;
-  return `<div class="seg branded st-${statusOf(s) || "later"}" id="seg-${esc(segKey(s))}"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}${statusChip(s)}</span><h4>${esc(s.title)}</h4>
+  return `<div class="seg branded st-${statusOf(s) || "later"}" id="seg-${esc(segKey(s))}"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}${statusChip(s)}</span><h4>${esc(s.title)}</h4>${s.type === "activity" ? resvLine(s) : ""}
     ${tap ? `<dl class="kv">${when2}${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}</dl>${more(s, `<dl class="kv">${info}</dl>${extra}`)}` : `<dl class="kv">${when2}${info}</dl>${extra}`}
     ${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
     <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${callBtn(s.phone, s.type === "activity" && !s.manageUrl)}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
@@ -1258,7 +1269,7 @@ function localComing(skip) {
   const items = localFor(state.person).filter(s => doneAt(s) > t0 && new Date(ms(s.start)).toDateString() !== today && s !== skip).slice(0, 4);
   if (!items.length) return "";
   return `<section class="card" aria-label="Coming up nearby"><div class="eyebrow">Coming up nearby</div><ul class="next">
-    ${items.map(s => `<li id="seg-${esc(segKey(s))}"><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.party ? `<br><span class="muted">${s.party} people${s.source ? ` · ${esc(s.source)}` : ""}</span>` : ""}${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}<br>${s.phone ? `<a class="btn mini" href="tel:${esc(s.phone.replace(/[^+\d]/g, ""))}">📞 Call</a> ` : ""}${s.address ? `<a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
+    ${items.map(s => `<li id="seg-${esc(segKey(s))}"><span class="when">${DD(s.start)}<br>${T(s.start)}</span><span><b>${icon(s)}${logo(brandOf(s))}${esc(s.title)}</b>${s.party || s.source ? `<br><span class="muted">${s.party ? `👥 ${s.party} ${s.party === 1 ? "person" : "people"}` : ""}${s.party && s.source ? " · " : ""}${s.source ? `booked ${esc(bookedHow(s.source))}` : ""}</span>` : ""}${s.address ? `<br><span class="muted">${esc(s.address.split(",")[0])}</span>` : ""}${s.confirmation ? `<br><span class="muted code">${esc(s.confirmation)}</span>` : ""}<br>${s.phone ? `<a class="btn mini" href="tel:${esc(s.phone.replace(/[^+\d]/g, ""))}">📞 Call</a> ` : ""}${s.address ? `<a class="btn mini" ${hrefAttrs(maps(s.address))}>Map ↗</a>` : ""}</span></li>`).join("")}</ul>
     <div class="btns"><a class="btn" href="#local">All local plans ›</a></div></section>`;
 }
 // What Now opens on (Santiago's rules):
