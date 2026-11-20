@@ -1504,6 +1504,8 @@ document.addEventListener("click", e => {
   if (go) {
     const find = () => document.getElementById(go.dataset.goto);
     let el = find();
+    // Hidden by a Flights/Hotels/Food/... filter? Show everything again before looking elsewhere.
+    if (!el && Object.keys(state.cat).length) { state.cat = {}; render(); el = find(); }
     for (const v of el ? [] : ["trips", "local"]) { state.view = v; render(); el = find(); if (el) break; }
     if (!el) return;
     for (let d = el.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
