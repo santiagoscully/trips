@@ -303,10 +303,12 @@ footer .about summary{color:var(--muted)}
 .avail table{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed;font-size:11px;margin-top:4px}
 .avail th{font-weight:600;color:var(--muted);font-size:10px;padding:2px 0}
 .avail th.av-d{text-align:left;width:52px}
-.avail td{height:24px;text-align:center;border-radius:5px;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avail td{height:30px;text-align:center;border-radius:5px;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avail td.av-d{text-align:left;font-weight:600;color:var(--ink);padding:0}
 .av-free{background:var(--good-soft);color:var(--good);font-weight:600}
-.av-busy{background:var(--accent);color:#fff;font-weight:600}
+.av-busy{background:var(--accent);color:#fff;cursor:pointer;line-height:1.15;padding:3px 2px!important}
+.av-busy b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis}.av-busy small{display:block;font-size:9px;opacity:.9;white-space:normal}
+.av-busy:active{filter:brightness(.85)}.seg{scroll-margin-top:180px}.seg.flash{outline:3px solid var(--accent);outline-offset:2px;transition:outline-color 1.2s}
 .av-out{background:transparent;color:var(--muted)}
 .avail tr.av-past td{opacity:.4}.avail tr.av-today td.av-d{color:var(--accent)}
 .avail .note{margin:6px 0 0}
@@ -1219,6 +1221,8 @@ function soloGuide(s) {
 }
 // ---------- Availability: every trip day in 5 parts, booked (one word) or free ----------
 const SLOTS = [["Morning", 8, 12], ["Lunch", 12, 14], ["Afternoon", 14, 18], ["Dinner", 18, 21], ["Night", 21, 24]];
+// "8:25a", "10a", "3:30p" in the item's own local time
+const hm12 = iso => { const p = parts(ms(iso), offMin(iso)), h = p.hh % 12 || 12; return `${h}${p.mi ? ":" + String(p.mi).padStart(2, "0") : ""}${p.hh < 12 ? "a" : "p"}`; };
 const wall = iso => ms(iso) + offMin(iso) * M; // local clock time as a number, so days split at local midnight
 function blockWord(s) {
   if (s.word) return s.word;
@@ -1237,23 +1241,34 @@ function availGrid(t) {
     if (s.type === "activity" && y - x > 16 * H) { long.push(s); continue; }
     if (s.type === "flight") { x -= 2 * H; y += H; } // airport time before, bags/exit after
     const w = blockWord(s);
-    blocks.push({ x, y, w, meal: w === "Dinner" ? "Dinner" : w === "Lunch" ? "Lunch" : "" });
+    blocks.push({ x, y, w, s, meal: w === "Dinner" ? "Dinner" : w === "Lunch" ? "Lunch" : "" });
   }
   // A layover between two flights is travel time too
   const fl = blocks.filter(k => k.w === "Flight").sort((p, q) => p.x - q.x);
-  for (let i = 1; i < fl.length; i++) if (fl[i].x - fl[i - 1].y < 8 * H && fl[i].x > fl[i - 1].y) blocks.push({ x: fl[i - 1].y, y: fl[i].x, w: "Flight", meal: "" });
+  for (let i = 1; i < fl.length; i++) if (fl[i].x - fl[i - 1].y < 8 * H && fl[i].x > fl[i - 1].y) blocks.push({ x: fl[i - 1].y, y: fl[i].x, w: "Layover", s: fl[i].s, lay: true, meal: "" });
   const lod = t.segments.find(s => s.type === "lodging"), off = offMin((lod || t).start || t.end);
   const today = Math.floor((now() + off * M) / D) * D;
   let rows = "";
   for (let d = Math.floor(a / D) * D; d <= Math.floor(b / D) * D; d += D) {
     const p = parts(d, 0);
-    const cells = SLOTS.map(([n, h0, h1]) => {
-      const s0 = d + h0 * H, s1 = d + h1 * H;
-      const mid = (s0 + s1) / 2;
-      if (mid < a - 2 * H || mid > b + H) return `<td class="av-out">–</td>`; // still home / back home
-      const k = blocks.find(k => k.meal ? k.meal === n && k.x < s1 && k.y > s0 : Math.min(k.y, s1) - Math.max(k.x, s0) >= 45 * M);
-      return k ? `<td class="av-busy">${esc(k.w)}</td>` : `<td class="av-free">free</td>`;
-    }).join("");
+    const slots = SLOTS.map(([n, h0, h1]) => {
+      const s0 = d + h0 * H, s1 = d + h1 * H, mid = (s0 + s1) / 2;
+      if (mid < a - 2 * H || mid > b + H) return "out"; // still home / back home
+      return blocks.find(k => k.meal ? k.meal === n && k.x < s1 && k.y > s0 : Math.min(k.y, s1) - Math.max(k.x, s0) >= 45 * M) || "free";
+    });
+    // Neighbouring slots taken by the same booking become one wide cell
+    let cells = "";
+    for (let i = 0; i < slots.length; ) {
+      let j = i + 1; while (j < slots.length && slots[j] === slots[i]) j++;
+      const k = slots[i], cs = j - i > 1 ? ` colspan="${j - i}"` : "";
+      if (k === "out") cells += `<td class="av-out"${cs}>–</td>`;
+      else if (k === "free") cells += Array(j - i).fill(`<td class="av-free">free</td>`).join("");
+      else {
+        const span = k.lay ? "" : `${hm12(k.s.start)}–${k.s.end ? hm12(k.s.end) : ""}`;
+        cells += `<td class="av-busy"${cs} data-goto="seg-${esc(segKey(k.s))}" data-more="1"><b>${esc(k.w)}</b>${span ? `<small>${span}</small>` : ""}</td>`;
+      }
+      i = j;
+    }
     rows += `<tr class="${d < today ? "av-past" : d === today ? "av-today" : ""}"><td class="av-d">${WD[p.wd]} ${p.d}</td>${cells}</tr>`;
   }
   const extra = long.map(s => `<p class="note muted">Not shown: ${esc(s.title)} (${sDate(s.start)}–${sDate(s.end)}), daily times not set.</p>`).join("");
@@ -1462,6 +1477,7 @@ document.addEventListener("click", e => {
     if (!el) return;
     for (let d = el.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
     if (el.tagName === "DETAILS") el.open = true;
+    if (go.dataset.more) { const m = el.querySelector("details.more"); if (m) m.open = true; el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1600); }
     el.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
