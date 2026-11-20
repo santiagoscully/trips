@@ -766,9 +766,22 @@ const statusOf = s => { const t0 = now(); if (!s.start) return ""; if (s.end && 
 const STATUS_CHIP = { done: `<span class="st st-done">✓ Done</span>`, now: `<span class="st st-now">Now</span>`, next: `<span class="st st-next">Up next</span>` };
 const statusChip = s => STATUS_CHIP[statusOf(s)] || "";
 // Items grouped by local day; a day is done when everything in it is done.
+// Hotel check-in is listed after the travel that gets you there (flight, ride, transfer, car pickup) that same day,
+// even when the official check-in time is earlier. Everything else is in start-time order.
+const TRAVEL = new Set(["flight", "ride", "transfer", "car"]);
+function sortTime(s, list) {
+  let t = ms(s.start);
+  if (s.type !== "lodging") return t;
+  for (const x of list) {
+    if (!TRAVEL.has(x.type) || !x.start) continue;
+    const ref = x.type === "car" || !x.end ? ms(x.start) : ms(x.end);
+    if (ref > t && ref - ms(s.start) <= 10 * H && ms(x.start) <= ms(s.start) + 10 * H) t = Math.max(t, (x.type === "car" || !x.end ? ms(x.start) : ms(x.start)) + 1);
+  }
+  return t;
+}
 function byDay(list) {
-  const days = [];
-  for (const s of list.slice().sort((a, b) => ms(a.start) - ms(b.start))) {
+  const days = [], key = new Map(list.map(s => [s, sortTime(s, list)]));
+  for (const s of list.slice().sort((a, b) => key.get(a) - key.get(b))) {
     const p = parts(ms(s.start), offMin(s.start)), k = `${p.y}-${String(p.mo + 1).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
     let d = days[days.length - 1];
     if (!d || d.k !== k) days.push(d = { k, label: DD(s.start), items: [] });
