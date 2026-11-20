@@ -298,6 +298,9 @@ footer .about summary{color:var(--muted)}
 .seg.st-done{opacity:.55}.seg.st-done:hover,.seg.st-done:focus-within{opacity:1}
 .day{display:flex;align-items:center;gap:6px;margin:14px 2px 6px;font-weight:700;font-size:13px;color:var(--muted)}
 .day.day-done{opacity:.6}
+.cats{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px 0;margin:2px 0 -4px}.cats::-webkit-scrollbar{display:none}
+.cat{flex:none;font:600 11.5px/1 var(--body);padding:6px 7px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
+.cat.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .avail{border:1px solid var(--line);border-radius:12px;padding:6px 10px 10px;background:var(--surface)}
 .avail>summary{cursor:pointer;font-weight:700;font-size:14px;padding:4px 0}
 .avail table{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed;font-size:11px;margin-top:4px}
@@ -383,7 +386,7 @@ const FAMILY_TAB = false;
 const CHECKIN_HELP = false;
 // Alicia's copy: no Now tab; "Trips" (upcoming, tap to expand) is the home view. Past trips stay at the bottom.
 const NO_NOW = false;
-const state = { trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
+const state = { cat: {}, trips: [], local: [], status: null, view: "now", override: null, loaded: false, error: null, person: "", locked: false, unlockError: "" };
 
 try { const v = localStorage.getItem("tb-view"); if (v) state.view = v; } catch (e) {}
 
@@ -917,14 +920,27 @@ function renderNow(trip, nextTrip) {
   return html;
 }
 // The trip day by day, opened at today: earlier days fold into one line you can open (or collapse the whole thing).
+// ---------- Category filter per trip: All / Flights / Hotels / Food / Fun / Other ----------
+const CAT_LABEL = { all: "All", flight: "Flights", hotel: "Hotels", food: "Food", fun: "Fun", other: "Other" };
+const CAT_ICON = { all: "", flight: "✈️", hotel: "🏨", food: "🍽️", fun: "🎢", other: "🚗" };
+const catOf = s => s.type === "flight" ? "flight" : s.type === "lodging" ? "hotel"
+  : s.type === "activity" ? (s.kind === "restaurant" || /^(dinner|lunch|breakfast|brunch)\b/i.test(s.title || "") ? "food" : "fun") : "other";
+const catFilter = (t, list) => { const c = state.cat[t.id]; return !c || c === "all" ? list : list.filter(s => catOf(s) === c); };
+function catBar(t, list) {
+  const n = {}; list.forEach(s => { const c = catOf(s); n[c] = (n[c] || 0) + 1; });
+  const keys = ["flight", "hotel", "food", "fun", "other"].filter(k => n[k]);
+  if (keys.length < 2) return "";
+  const cur = state.cat[t.id] || "all";
+  return `<div class="cats">${["all", ...keys].map(k => `<button class="cat${cur === k ? " on" : ""}" data-cat="${k}" data-trip="${esc(t.id)}">${CAT_ICON[k]}${CAT_ICON[k] ? " " : ""}${CAT_LABEL[k]}</button>`).join("")}</div>`;
+}
 function tripDays(trip) {
-  const t0 = now(), days = byDay(withRides(trip));
+  const t0 = now(), all = withRides(trip), days = byDay(catFilter(trip, all));
   const ref = trip.segments.find(s => ms(s.start) >= t0)?.start || trip.segments[trip.segments.length - 1]?.start || trip.start;
   const tp = parts(t0, offMin(ref)), today = `${tp.y}-${String(tp.mo + 1).padStart(2, "0")}-${String(tp.d).padStart(2, "0")}`;
   const earlier = days.filter(d => d.k < today), rest = days.filter(d => d.k >= today);
-  return `<details class="itin" open data-k="itin-${esc(trip.id)}"><summary>${esc(trip.title)}, day by day</summary>
+  return `<details class="itin" open data-k="itin-${esc(trip.id)}"><summary>${esc(trip.title)}, day by day</summary>${catBar(trip, all)}
     ${earlier.length ? `<details class="earlier" data-k="earlier-${esc(trip.id)}"><summary>Earlier in this trip · ${earlier.length} ${earlier.length === 1 ? "day" : "days"}</summary>${dayBlocks(earlier)}</details>` : ""}
-    ${rest.length ? dayBlocks(rest) : `<p class="note">Everything in this trip is done.</p>`}</details>`;
+    ${rest.length ? dayBlocks(rest) : `<p class="note">${state.cat[trip.id] && state.cat[trip.id] !== "all" ? "Nothing left in this category." : "Everything in this trip is done."}</p>`}</details>`;
 }
 // "in 2 h 30 m"
 const inHM = d => { const m = Math.max(0, Math.round(d / M)), dd = Math.floor(m / 1440), hh = Math.floor((m % 1440) / 60), mm = m % 60;
@@ -1292,7 +1308,7 @@ function renderTrips(past) {
       <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentative</span>` : ""}${CHECKIN_HELP && state.extras?.assistCard && !past ? (assistCovers(t) ? `<span class="chip ins-ok">🛡️ Covered</span>` : `<span class="chip ins-no">🛡️ Not covered</span>`) : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Starts " + rel(ms(t.start) - t0) : "Happening now"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} isn't on this trip</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
-      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${CHECKIN_HELP ? "" : availGrid(t)}${dayBlocks(byDay(withRides(t)))}</div></details>`;
+      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${CHECKIN_HELP ? "" : availGrid(t)}${catBar(t, withRides(t))}${dayBlocks(byDay(catFilter(t, withRides(t))))}</div></details>`;
   });
   return html;
 }
@@ -1469,6 +1485,8 @@ document.addEventListener("click", e => {
   const tab = e.target.closest(".tab, .footlink");
   if (tab) { state.view = tab.dataset.view; try { localStorage.setItem("tb-view", state.view); } catch (_) {} render(); window.scrollTo(0, 0); return; }
   // "Go to it": open whatever folds the item, then scroll to it (looks in Trips or Local if it isn't on this page)
+  const cb = e.target.closest("[data-cat]");
+  if (cb) { state.cat[cb.dataset.trip] = cb.dataset.cat; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   const go = e.target.closest("[data-goto]");
   if (go) {
     const find = () => document.getElementById(go.dataset.goto);
