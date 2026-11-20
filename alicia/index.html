@@ -299,6 +299,18 @@ footer .about summary{color:var(--muted)}
 .seg.st-done{opacity:.55}.seg.st-done:hover,.seg.st-done:focus-within{opacity:1}
 .day{display:flex;align-items:center;gap:6px;margin:14px 2px 6px;font-weight:700;font-size:13px;color:var(--muted)}
 .day.day-done{opacity:.6}
+.avail{border:1px solid var(--line);border-radius:12px;padding:6px 10px 10px;background:var(--surface)}
+.avail>summary{cursor:pointer;font-weight:700;font-size:14px;padding:4px 0}
+.avail table{width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed;font-size:11px;margin-top:4px}
+.avail th{font-weight:600;color:var(--muted);font-size:10px;padding:2px 0}
+.avail th.av-d{text-align:left;width:52px}
+.avail td{height:24px;text-align:center;border-radius:5px;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avail td.av-d{text-align:left;font-weight:600;color:var(--ink);padding:0}
+.av-free{background:var(--good-soft);color:var(--good);font-weight:600}
+.av-busy{background:var(--accent);color:#fff;font-weight:600}
+.av-out{background:transparent;color:var(--muted)}
+.avail tr.av-past td{opacity:.4}.avail tr.av-today td.av-d{color:var(--accent)}
+.avail .note{margin:6px 0 0}
 details.more{margin:8px 0}details.more>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--accent,#1D5FB8);padding:6px 0}
 details.itin>summary,details.earlier>summary{cursor:pointer;font-weight:700;padding:10px 2px}
 details.earlier{border:1px dashed var(--line);border-radius:12px;padding:0 10px;margin:6px 0}
@@ -1206,6 +1218,49 @@ function soloGuide(s) {
   const g = s.soloGuide; if (!CHECKIN_HELP || !g || g.for !== state.person) return "";
   return `<div class="sologuide"><div class="eyebrow">🧭 ${esc(g.title)}</div><ol>${g.steps.map(x => `<li>${esc(x)}</li>`).join("")}</ol></div>`;
 }
+// ---------- Availability: every trip day in 5 parts, booked (one word) or free ----------
+const SLOTS = [["Morning", 8, 12], ["Lunch", 12, 14], ["Afternoon", 14, 18], ["Dinner", 18, 21], ["Night", 21, 24]];
+const wall = iso => ms(iso) + offMin(iso) * M; // local clock time as a number, so days split at local midnight
+function blockWord(s) {
+  if (s.word) return s.word;
+  if (s.type === "flight") return "Flight";
+  if (s.type === "transfer") return "Transfer";
+  if (s.kind === "restaurant" || /^dinner|^lunch/i.test(s.title || "")) return parts(wall(s.start), 0).hh < 16 ? "Lunch" : "Dinner";
+  return "Booked";
+}
+function availGrid(t) {
+  const a = wall(t.start), b = wall(t.end);
+  if (b - a < 20 * H) return "";
+  const blocks = [], long = [];
+  for (const s of t.segments) {
+    if (!s.start || !["flight", "transfer", "activity"].includes(s.type)) continue;
+    let x = wall(s.start), y = s.end ? wall(s.end) : x + 2 * H;
+    if (s.type === "activity" && y - x > 16 * H) { long.push(s); continue; }
+    if (s.type === "flight") { x -= 2 * H; y += H; } // airport time before, bags/exit after
+    const w = blockWord(s);
+    blocks.push({ x, y, w, meal: w === "Dinner" ? "Dinner" : w === "Lunch" ? "Lunch" : "" });
+  }
+  // A layover between two flights is travel time too
+  const fl = blocks.filter(k => k.w === "Flight").sort((p, q) => p.x - q.x);
+  for (let i = 1; i < fl.length; i++) if (fl[i].x - fl[i - 1].y < 8 * H && fl[i].x > fl[i - 1].y) blocks.push({ x: fl[i - 1].y, y: fl[i].x, w: "Flight", meal: "" });
+  const lod = t.segments.find(s => s.type === "lodging"), off = offMin((lod || t).start || t.end);
+  const today = Math.floor((now() + off * M) / D) * D;
+  let rows = "";
+  for (let d = Math.floor(a / D) * D; d <= Math.floor(b / D) * D; d += D) {
+    const p = parts(d, 0);
+    const cells = SLOTS.map(([n, h0, h1]) => {
+      const s0 = d + h0 * H, s1 = d + h1 * H;
+      const mid = (s0 + s1) / 2;
+      if (mid < a - 2 * H || mid > b + H) return `<td class="av-out">–</td>`; // still home / back home
+      const k = blocks.find(k => k.meal ? k.meal === n && k.x < s1 && k.y > s0 : Math.min(k.y, s1) - Math.max(k.x, s0) >= 45 * M);
+      return k ? `<td class="av-busy">${esc(k.w)}</td>` : `<td class="av-free">free</td>`;
+    }).join("");
+    rows += `<tr class="${d < today ? "av-past" : d === today ? "av-today" : ""}"><td class="av-d">${WD[p.wd]} ${p.d}</td>${cells}</tr>`;
+  }
+  const extra = long.map(s => `<p class="note muted">Not shown: ${esc(s.title)} (${sDate(s.start)}–${sDate(s.end)}), daily times not set.</p>`).join("");
+  return `<details class="avail" data-k="avail-${esc(t.id)}" open><summary>🗓 Free time to book</summary>
+    <table><tr><th class="av-d"></th>${SLOTS.map(([n]) => `<th>${n === "Afternoon" ? "After lunch" : n}</th>`).join("")}</tr>${rows}</table>${extra}</details>`;
+}
 function renderTrips(past) {
   const t0 = Date.now();
   const list = tripsFor(state.person).filter(t => past ? ms(t.end) < t0 : ms(t.end) >= t0);
@@ -1223,7 +1278,7 @@ function renderTrips(past) {
       <div class="chips">${t.work ? `<span class="chip work-chip">Work · ${esc(t.work.org)}</span>` : ""}${t.tentative ? `<span class="chip tentative">Tentativo</span>` : ""}${CHECKIN_HELP && state.extras?.assistCard && !past ? (assistCovers(t) ? `<span class="chip ins-ok">🛡️ Con seguro</span>` : `<span class="chip ins-no">🛡️ Sin seguro</span>`) : ""}${soon ? `<span class="chip soon">${ms(t.start) > t0 ? "Empieza " + rel(ms(t.start) - t0) : "En curso"}</span>` : ""}${!peopleOf(t).has(MAIN) ? `<span class="chip fam">${first(MAIN)} no va en este viaje</span>` : ""}
         ${t.travelers.map(n => `<span class="chip">${first(n)}</span>`).join("")}${(t.companions || []).map(n => `<span class="chip">+ ${first(n)}</span>`).join("")}</div>
       ${tripEnds(t)}
-      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${dayBlocks(byDay(withRides(t)))}</div></details>`;
+      </summary><div class="trip-body">${quickRow(t)}${(t.watch || []).map(w => `<div class="flag">${esc(w)}</div>`).join("")}${CHECKIN_HELP ? "" : availGrid(t)}${dayBlocks(byDay(withRides(t)))}</div></details>`;
   });
   return html;
 }
