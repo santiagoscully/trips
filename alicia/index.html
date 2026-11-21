@@ -299,6 +299,7 @@ footer .about summary{color:var(--muted)}
 .seg.st-done{opacity:.55}.seg.st-done:hover,.seg.st-done:focus-within{opacity:1}
 .day{display:flex;align-items:center;gap:6px;margin:14px 2px 6px;font-weight:700;font-size:13px;color:var(--muted)}
 .day.day-done{opacity:.6}
+.donebar{display:flex;justify-content:flex-end;padding:6px 14px 10px}
 .cats{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px 0;margin:2px 0 -4px}.cats::-webkit-scrollbar{display:none}
 .cat{flex:none;font:600 11.5px/1 var(--body);padding:6px 7px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
 .cat.on{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -758,11 +759,14 @@ function cabinMap(f) {
 // Status of an item: "done" once its end time passes, "now" while it's happening, "next" for the next one in its trip.
 const segKey = s => s.id || `${s.type}-${s.start}`;
 const NEXT = new Set();
+// Items you marked done yourself (kept on this phone only)
+const MANUAL_DONE = new Set((() => { try { return JSON.parse(localStorage.getItem("tba-done") || "[]"); } catch (_) { return []; } })());
+const saveDone = () => { try { localStorage.setItem("tba-done", JSON.stringify([...MANUAL_DONE])); } catch (_) {} };
 function markNext(list) {
-  const t0 = now(), n = list.filter(s => s.start && ms(s.start) > t0).sort((a, b) => ms(a.start) - ms(b.start))[0];
+  const t0 = now(), n = list.filter(s => s.start && ms(s.start) > t0 && !MANUAL_DONE.has(segKey(s))).sort((a, b) => ms(a.start) - ms(b.start))[0];
   if (n) NEXT.add(segKey(n));
 }
-const statusOf = s => { const t0 = now(); if (!s.start) return ""; if (s.end && t0 >= ms(s.end)) return "done"; if (t0 >= ms(s.start)) return "now"; return NEXT.has(segKey(s)) ? "next" : ""; };
+const statusOf = s => { const t0 = now(); if (!s.start) return ""; if (MANUAL_DONE.has(segKey(s))) return "done"; if (s.end && t0 >= ms(s.end)) return "done"; if (t0 >= ms(s.start)) return "now"; return NEXT.has(segKey(s)) ? "next" : ""; };
 const STATUS_CHIP = { done: `<span class="st st-done">✓ Listo</span>`, now: `<span class="st st-now">Ahora</span>`, next: `<span class="st st-next">Lo próximo</span>` };
 const statusChip = s => STATUS_CHIP[statusOf(s)] || "";
 // Items grouped by local day; a day is done when everything in it is done.
@@ -1119,8 +1123,18 @@ const doneAt = s => {
   if (s.type === "activity" && ms(s.end) - ms(s.start) <= 12 * H) return ms(s.start) + 4 * H;
   return ms(s.end);
 };
+// Adds a small "Mark done" / "Undo" button at the bottom of a card (from 24 h before it starts)
+function withDoneBtn(s, html) {
+  const k = segKey(s), on = MANUAL_DONE.has(k);
+  if (!on && now() < ms(s.start) - 24 * H) return html;
+  const b = `<div class="donebar"><button class="btn mini" data-mark="${esc(k)}">${on ? "↩ Deshacer" : "✓ Marcar como listo"}</button></div>`;
+  return html.replace(/<\/div>\s*$/, b + "</div>");
+}
 function segOrDone(s) {
-  if (!s.end || doneAt(s) > now()) return segBlock(s);
+  const manual = MANUAL_DONE.has(segKey(s));
+  if (!manual && (!s.end || doneAt(s) > now())) return withDoneBtn(s, segBlock(s));
+  if (manual) { const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
+    return `<details class="seg-done" data-k="done-${esc(segKey(s))}" id="seg-${esc(segKey(s))}"><summary><span class="done-chip">✓ Listo</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${withDoneBtn(s, segBlock(s))}</details>`; }
   const name = s.type === "flight" ? `${s.flightNumber} ${s.from} → ${s.to}` : s.title;
   return `<details class="seg-done" data-k="done-${esc(segKey(s))}" id="seg-${esc(segKey(s))}"><summary><span class="done-chip">✓ Listo</span>${icon(s)}<span class="done-name">${esc(name)}</span><span class="done-when">${DD(s.start)}</span></summary>${segBlock(s)}</details>`;
 }
@@ -1499,6 +1513,8 @@ document.addEventListener("click", e => {
   const tab = e.target.closest(".tab, .footlink");
   if (tab) { state.view = tab.dataset.view; try { localStorage.setItem("tba-view", state.view); } catch (_) {} render(); window.scrollTo(0, 0); return; }
   // "Go to it": open whatever folds the item, then scroll to it (looks in Trips or Local if it isn't on this page)
+  const db = e.target.closest("[data-mark]");
+  if (db) { const k = db.dataset.mark; MANUAL_DONE.has(k) ? MANUAL_DONE.delete(k) : MANUAL_DONE.add(k); saveDone(); const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   const cb = e.target.closest("[data-cat]");
   if (cb) { state.cat[cb.dataset.trip] = cb.dataset.cat; const y = window.scrollY; render(); window.scrollTo(0, y); return; }
   const go = e.target.closest("[data-goto]");
