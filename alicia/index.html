@@ -317,6 +317,8 @@ footer .about summary{color:var(--muted)}
 .av-out{background:transparent;color:var(--muted)}
 .avail tr.av-past td{opacity:.4}.avail tr.av-today td.av-d{color:var(--accent)}
 .avail .note{margin:6px 0 0}
+.avail tr.av-place td{padding:8px 4px 2px;font-size:12px;font-weight:700;color:var(--accent);text-align:left;height:auto;white-space:normal}
+.avail tr.av-place td span{font-weight:500;color:var(--muted)}
 details.more{margin:8px 0}details.more>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--accent,#1D5FB8);padding:6px 0}
 details.itin>summary,details.earlier>summary{cursor:pointer;font-weight:700;padding:10px 2px}
 details.earlier{border:1px dashed var(--line);border-radius:12px;padding:0 10px;margin:6px 0}
@@ -1308,8 +1310,27 @@ function availGrid(t) {
   for (let i = 1; i < fl.length; i++) if (fl[i].x - fl[i - 1].y < 8 * H && fl[i].x > fl[i - 1].y) blocks.push({ x: fl[i - 1].y, y: fl[i].x, w: "Layover", s: fl[i].s, lay: true, meal: "" });
   const lod = t.segments.find(s => s.type === "lodging"), off = offMin((lod || t).start || t.end);
   const today = Math.floor((now() + off * M) / D) * D;
+  // Where you sleep each night: a small header row whenever it changes (trips with more than one city or hotel)
+  const me = state.person || MAIN, nm = n => typeof n === "string" ? n : n?.name;
+  const stays = t.segments.filter(s => s.type === "lodging" && s.start && s.end);
+  const mine = stays.filter(s => !(s.travelers || []).length || s.travelers.some(n => nm(n) === me));
+  const pool = mine.length ? mine : stays, flights = t.segments.filter(s => s.type === "flight");
+  const nightOf = d => { const x = d + 22 * H;
+    return pool.find(s => wall(s.start) <= x && x < wall(s.end)) || (flights.some(f => wall(f.start) <= x && x < wall(f.end)) ? "fly" : null); };
+  const days = []; for (let d = Math.floor(a / D) * D; d <= Math.floor(b / D) * D; d += D) days.push(d);
+  const nights = days.map(nightOf);
+  const multiCity = new Set(nights.filter(n => n && n !== "fly").map(n => n.city || n.title)).size > 1;
+  const keyOf = n => !n ? "" : n === "fly" ? "fly" : multiCity ? (n.city || n.title) : (n.short || n.title);
+  const showPlaces = new Set(nights.map(keyOf).filter(k => k && k !== "fly")).size > 1;
+  const placeRow = i => {
+    const n = nights[i], k = keyOf(n); if (!showPlaces || !k || (i > 0 && keyOf(nights[i - 1]) === k)) return "";
+    let c = 0; while (i + c < nights.length && keyOf(nights[i + c]) === k) c++;
+    const label = n === "fly" ? "✈ Night on the plane" : multiCity ? `📍 ${esc(n.city || n.title)}${n.short ? ` · ${esc(n.short)}` : ""}` : `🏨 ${esc(n.short || n.title)}`;
+    return `<tr class="av-place"><td colspan="6">${label}${n === "fly" ? "" : ` <span>· ${c} ${c === 1 ? "night" : "nights"}</span>`}</td></tr>`;
+  };
   let rows = "";
-  for (let d = Math.floor(a / D) * D; d <= Math.floor(b / D) * D; d += D) {
+  for (const [i, d] of days.entries()) {
+    rows += placeRow(i);
     const p = parts(d, 0);
     const slots = SLOTS.map(([n, h0, h1]) => {
       const s0 = d + h0 * H, s1 = d + h1 * H, mid = (s0 + s1) / 2;
