@@ -142,7 +142,7 @@ main{display:grid;gap:20px;padding-top:20px}
 .ckrow .btn{justify-self:start}
 .ends{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .ends b{font-family:var(--body);color:var(--ink);margin-right:4px}
-.trip-body{padding:0 18px 18px;display:grid;gap:12px}
+.trip-body{padding:0 18px 18px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .seg{border:1px solid var(--line);border-radius:12px;background:var(--surface);display:grid}
 .seg-main{padding:14px 16px;display:grid;gap:8px}
 .ic{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;margin-right:7px;vertical-align:-6px;background:var(--accent-soft);color:var(--accent)}
@@ -337,6 +337,11 @@ details.earlier{border:1px dashed var(--line);border-radius:12px;padding:0 10px;
 .bag{display:grid;gap:2px;padding:9px 12px;border-radius:10px;margin:8px 0;font-size:14px;line-height:1.35}
 .bag b{font-size:15px}.bag-ok{background:var(--good-soft)}.bag-ok b{color:var(--good)}
 .bag-pay{background:var(--bad-soft);border:1px solid var(--bad)}.bag-pay b{color:var(--bad)}
+.pb-ok{background:var(--good-soft)}.pb-ok b{color:var(--good)}
+.pb-pay{background:var(--bad-soft);border:1px solid var(--bad)}.pb-pay b{color:var(--bad)}
+.pb-part{background:#fff4d6;border:1px solid #e0a800}.pb-part b{color:#8a5a00}
+.pb-free{background:var(--surface-2,#f1f3f6)}.pb-free b{color:var(--muted)}
+@media (prefers-color-scheme:dark){.pb-part{background:#3a2f10;border-color:#b98a00}.pb-part b{color:#ffcf5c}}
 
 /* reservation: people + how it was booked */
 .resv{display:flex;flex-wrap:wrap;gap:6px 14px;margin:4px 0 8px;font-size:15px}
@@ -1163,6 +1168,17 @@ function segBlock(s) {
   }
   const label = s.home ? "Family home" : ({ restaurant: "Restaurant", movie: "Movie", show: "Show", event: "Event" }[s.kind]) || ({ lodging: "Stay", car: "Rental car", transfer: "Transfer", activity: "Activity" }[s.type] || s.type);
   // Reservations: how many people and how it was booked, big and right under the name
+// Paid or not, big and right under the name: s.pay = {status: full | partial | none | free | unknown, text}
+const PAY = { full: ["ok", "✓ Paid in full"], partial: ["part", "◐ Partly paid"], none: ["pay", "✗ Not paid yet"], free: ["free", "Nothing to pay in advance"], unknown: ["part", "? Payment not confirmed"] };
+function payBadge(s) {
+  if (VIEW_ONLY || s.home || s.type === "ride") return "";
+  let p = s.pay;
+  if (!p && s.payment) p = { status: /^Nothing paid|nothing prepaid/i.test(s.payment) ? "free" : s.feesDue || /still due|deposit/i.test(s.payment) ? "partial" : "full" };
+  if (!p) { if (!["lodging", "car", "transfer"].includes(s.type)) return ""; p = { status: "unknown" }; }
+  const [cls, label] = PAY[p.status] || PAY.unknown;
+  const text = p.text || [s.payment, s.feesDue ? `Still to pay: ${s.feesDue}` : ""].filter(Boolean).join(" · ");
+  return `<div class="bag paybadge pb-${cls}"><b>💳 ${label}</b>${text ? `<span>${esc(text)}</span>` : ""}</div>`;
+}
 const bookedHow = src => /phone/i.test(src) ? "by phone" : /^email/i.test(src) ? "by email with the restaurant" : `on ${src}`;
 const resvLine = s => s.party || s.source ? `<div class="resv">${s.party ? `<span>👥 <b>${s.party} ${s.party === 1 ? "person" : "people"}</b></span>` : ""}${s.source ? `<span>📝 Booked ${esc(bookedHow(s.source))}</span>` : ""}</div>` : "";
 // hotels, transfers and cars: the basics on the card, the rest one tap away ("Full details")
@@ -1172,7 +1188,7 @@ const resvLine = s => s.party || s.source ? `<div class="resv">${s.party ? `<spa
     ${s.payment ? row("Paid", `<span class="paid${/^Nothing paid/.test(s.payment) ? " none" : ""}">${esc(s.payment)}</span>`) : ""}${row("Refundable", esc(s.refundable))}${row("Still to pay", s.feesDue ? `<b>${esc(s.feesDue)}</b>` : "")}
     ${!tap && s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}${codeRow("Confirmation", s.confirmation)}${row("Phone", s.phone ? `<span class="code">${esc(s.phone)}</span>` : "")}`;
   const extra = `${(s.details || []).map(d => `<p class="note">• ${esc(d)}</p>`).join("")}${cancelInfo(s)}`;
-  return `<div class="seg branded st-${statusOf(s) || "later"}" id="seg-${esc(segKey(s))}"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}${statusChip(s)}</span><h4>${esc(s.title)}</h4>${s.type === "activity" ? resvLine(s) : ""}
+  return `<div class="seg branded st-${statusOf(s) || "later"}" id="seg-${esc(segKey(s))}"${brandStyle(s)}>${segPhoto(s)}<div class="seg-main"><span class="seg-type">${icon(s)}${label}${brandOf(s) ? ` · ${logo(brandOf(s))}${esc(brandOf(s).name)}` : ""}${statusChip(s)}</span><h4>${esc(s.title)}</h4>${s.type === "activity" ? resvLine(s) : ""}${payBadge(s)}
     ${tap ? `<dl class="kv">${when2}${s.address ? row("Address", `${esc(s.address)}${copyBtn(s.address)}`) : ""}</dl>${more(s, `<dl class="kv">${info}</dl>${extra}`)}` : `<dl class="kv">${when2}${info}</dl>${extra}`}
     ${(s.notes || []).map(n => `<div class="flag">${esc(n)}</div>`).join("")}
     <div class="btns">${hotelCk(s) ? ckLink(s, s.onlineCheckin.url, s.onlineCheckin.label, true) : ""}${callBtn(s.phone, s.type === "activity" && !s.manageUrl)}${s.manageUrl ? link(s.manageUrl, `Manage on ${s.source}`, true) : ""}${s.emailUrl ? link(s.emailUrl, "Open confirmation email") : ""}${s.address ? link(maps(s.address), "Map") : ""}${link(s.link, "Manage booking")}</div></div></div>`;
